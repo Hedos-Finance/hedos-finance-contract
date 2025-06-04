@@ -38,7 +38,8 @@ async function stake() {
     console.log(executedTransaction);
 }
 async function main() {
-    await unstake();
+    await stake();
+    // await unstake();
 }
 
 
