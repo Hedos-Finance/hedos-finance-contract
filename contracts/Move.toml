@@ -6,7 +6,9 @@ authors = []
 [addresses]
 fauz   = "0x3d4d0c5a1467ba82881e89b21bfabd85f38225ccbf27309ebdd6d61417923d64"
 merkle = "0x5ae6789dd2fec1a9ec9cccfb3acaf12e93d432f0a3a42c92fe1a9d490b7bbc06"
-
+amnis = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
+delta_hedging = "0b625e2c4582203073b54cded720782bd87b059ba98d8229177baf16b969c5d9"
+pancakeswap = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
 [dev-addresses]
 
 [dependencies.AptosFramework]
@@ -19,3 +21,5 @@ subdir = "aptos-framework"
 [dependencies]
 merkle = { local = "../deps/merkle" }
 merkle-common = { local = "../deps/merkle-common" }
+amnis = {local = "../deps/amnis" }
+pancakeswap = { local = "../deps/pancakeswap" }

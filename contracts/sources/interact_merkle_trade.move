@@ -1,4 +1,4 @@
-module fauz::interact_merkle_trade {
+module delta_hedging::interact_merkle_trade {
     use std::string::{String,utf8};
     use merkle::managed_trading;
 
@@ -12,11 +12,11 @@ module fauz::interact_merkle_trade {
         _pair: String,
     ): (u64, u64) {
         if (_pair == utf8(b"APT_USD")) {
-            let _size_delta = (_collateral_delta * 50 / 53) * _leverage;
+            let _size_delta = (_collateral_delta * 25 / 28) * _leverage;
             if (_open) {
                 (_size_delta, _collateral_delta)
             } else {
-                (_size_delta, (_collateral_delta * 50 / 53))
+                (_size_delta, (_collateral_delta * 25 / 28))
             }
         } else {
             abort 1;
