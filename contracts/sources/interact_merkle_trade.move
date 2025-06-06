@@ -1,4 +1,4 @@
-module fauz::interact_merkle_trade {
+module delta_hedging::interact_merkle_trade {
     use std::string::{String,utf8};
     use merkle::managed_trading;
 
