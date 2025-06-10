@@ -1,0 +1,32 @@
+[package]
+name = "Delta_Hedging_Beta2"
+version = "1.0.0"
+authors = []
+
+[addresses]
+hello_aptos_network = "de8dccd14c681e868d062dab335cdb26c8177b238935f9d38d13909a3e79b615"
+amnis               = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
+pancakeswap         = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
+aptos_framework     = "0x1"
+wrappedcoins        = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
+multi_router        = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
+liquidswap_v05      = "0x0163df34fccbf003ce219d3f1d9e70d140b60622cb9dd47599c25fb2f797ba6e"
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dependencies]
+amnis               = { local = "../deps/amnis" }
+PancakeSwap         = { local = "../deps/PancakeSwap" }
+WrappedCoins        = { local = "../deps/WrappedCoins" }
+MultiRouter         = { local = "../deps/MultiRouter" }
+Liquidswapv05       = { local = "../deps/Liquidswapv05" }
+
+[dependencies.Liquidswap]
+git = "https://github.com/pontem-network/liquidswap.git"
+rev = "main"
+
+[dev-dependencies]
