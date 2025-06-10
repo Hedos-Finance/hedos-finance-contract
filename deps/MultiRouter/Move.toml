@@ -1,0 +1,22 @@
+[package]
+name = 'MultiRouter'
+version = '1.0.0'
+published-at = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
+
+[addresses]
+multi_router = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
+
+[dependencies.LiquidswapRouterV2]
+git = "https://github.com/pontem-network/liquidswap"
+rev = "bump-deps-and-update-ci"
+subdir = "liquidswap_router_v2"
+
+[dependencies.Liquidswap]
+git = 'https://github.com/pontem-network/liquidswap.git'
+rev = 'main'
+
+[dependencies.Liquidswapv05]
+Liquidswapv05       = { local = "../deps/Liquidswapv05" }
+
+
+[dev-dependencies]
