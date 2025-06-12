@@ -30,6 +30,7 @@ async function swap() {
     const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
     console.log(executedTransaction);
 }
+
 async function main() {
     await swap();
 }
