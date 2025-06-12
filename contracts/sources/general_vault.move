@@ -102,11 +102,11 @@ module delta_hedging::general_vault {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
-        let total_share_of_risky_vault = vault.total_share_of_risky_vault;
-        let user_share = total_share_of_risky_vault * amount / total_value;
+        let total_share = vault.total_share_of_risky_vault + vault.total_share_of_safety_vault;
+        let user_share = total_share * amount / total_value;
 
         update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, true);
-        vault.total_share_of_risky_vault = total_share_of_risky_vault + user_share;
+        vault.total_share_of_risky_vault += user_share;
 
         transfer_usdc(signer, DELTA_HEDGING, amount);
 
@@ -121,11 +121,11 @@ module delta_hedging::general_vault {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
-        let total_share_of_safety_vault = vault.total_share_of_safety_vault;
-        let user_share = total_share_of_safety_vault * amount / total_value;
+        let total_share = vault.total_share_of_risky_vault + vault.total_share_of_safety_vault;
+        let user_share = total_share * amount / total_value;
 
         update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, true);
-        vault.total_share_of_safety_vault = total_share_of_safety_vault + user_share;
+        vault.total_share_of_safety_vault += user_share;
 
         transfer_usdc(signer, DELTA_HEDGING, amount);
         
@@ -140,11 +140,11 @@ module delta_hedging::general_vault {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
-        let total_share_of_risky_vault = vault.total_share_of_risky_vault;
-        let user_share = total_share_of_risky_vault * amount / total_value;
+        let total_share = vault.total_share_of_risky_vault + vault.total_share_of_safety_vault;
+        let user_share = total_share * amount / total_value;
 
         update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
-        vault.total_share_of_risky_vault = total_share_of_risky_vault - user_share;
+        vault.total_share_of_risky_vault -= user_share;
 
         // TODO: update interact with stake&perp
 
@@ -162,11 +162,11 @@ module delta_hedging::general_vault {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
-        let total_share_of_safety_vault = vault.total_share_of_safety_vault;
-        let user_share = total_share_of_safety_vault * amount / total_value;
+        let total_share = vault.total_share_of_risky_vault + vault.total_share_of_safety_vault;
+        let user_share = total_share * amount / total_value;
 
         update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
-        vault.total_share_of_safety_vault = total_share_of_safety_vault - user_share;
+        vault.total_share_of_safety_vault -= user_share;
 
         // TODO: update interact with stake&perp
         
