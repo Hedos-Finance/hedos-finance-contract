@@ -26,6 +26,8 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         user_address: address,
         amount: u64
     ) {
+        assert!(amount > 0, 0);
+        assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
         router::deposit_and_stake_entry(
             owner_signer,
             amount,
@@ -57,7 +59,8 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         user_address: address,
     ) {
         let current_user_stake = DeltaHedgingStakingV2Storage::get_user_stake_view(user_address);
-        assert!(current_user_stake > 0,);
+        assert!(current_user_stake > 0, 0);
+        assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
         router::unstake_entry(
             owner_signer,
             current_user_stake, 
@@ -75,7 +78,7 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
             owner_signer,
             user_address, 
             0,
-            false
+            true
             );
         
         let amapt_apapt = ((current_user_stake as u128) * (stapt_token::stapt_price() as u128) / PRECISION) as u64;
@@ -116,6 +119,8 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         amount: u64,
         expected_amount_out: u64
     ) {
+        assert!(amount > 0, 0);
+        assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
         let total_apt = DeltaHedgingStakingV2Storage::get_total_apt_view();
         assert!(total_apt >= amount, 1);
         let new_total_apt = total_apt - amount;
@@ -155,6 +160,8 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         amount: u64,
         expected_amount_out: u64
     ) {
+        assert!(amount > 0, 0);
+        assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
         let total_usdc = DeltaHedgingStakingV2Storage::get_total_usdc_view();
         let new_total_usdc = total_usdc - amount;
         DeltaHedgingStakingV2Storage::set_total_usdc(
