@@ -8,6 +8,7 @@ fauz    = "0x3d4d0c5a1467ba82881e89b21bfabd85f38225ccbf27309ebdd6d61417923d64"
 merkle  = "0x5ae6789dd2fec1a9ec9cccfb3acaf12e93d432f0a3a42c92fe1a9d490b7bbc06"
 pancake = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
 delta_hedging = "0x3d4d0c5a1467ba82881e89b21bfabd85f38225ccbf27309ebdd6d61417923d64"
+USDC = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
 aptos_framework = "0x1"
 
 [dev-addresses]

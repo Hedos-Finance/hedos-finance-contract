@@ -3,14 +3,23 @@ module delta_hedging::general_vault {
     // use aptos_framework::aptos_account::{Self, transfer_fungible_assets};
     // use aptos_framework::coin::{Self, Coin};
     use aptos_framework::table::{Self, Table};
-    use aptos_framework::event::{Self, emit};
+    use aptos_framework::event::{emit};
+    use aptos_framework::object::{Self, ExtendRef};
+
+    use std::signer::{Self};
 
     use delta_hedging::math::{I64, init_i64, get_value, is_negative, add, sub};
     use delta_hedging::white_list::{only_admin};
+    use delta_hedging::token::{transfer_usdc};
 
     const DELTA_HEDGING: address = @delta_hedging;
 
     const NOT_ENOUGH_SHARE: u64 = 997;
+
+    #[event]
+    struct CreateNewVault has drop, store {
+        new_vault_address: address
+    }
 
     struct Vault has key {
         total_share_of_safety_vault: u64,
@@ -20,7 +29,12 @@ module delta_hedging::general_vault {
 
         fund_fee: I64,
         fund_fee_risky_rate_numerator: u64,
-        fund_fee_risky_rate_denominator: u64,
+        fund_fee_risky_rate_denominator: u64, 
+    }
+
+    struct VaultRef has key {
+        vault_address: address,
+        vault_extend_ref: ExtendRef,
     }
 
     #[event]
@@ -37,9 +51,15 @@ module delta_hedging::general_vault {
         is_risky: bool,
     }
 
-    public entry fun init_vault(signer: &signer) {
+    public entry fun init_vault(signer: &signer) acquires VaultRef {
         only_admin(signer);
-        move_to(signer, Vault {
+
+        let constructor_ref = &object::create_object(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer(constructor_ref);
+        let extend_ref = object::generate_extend_ref(constructor_ref);
+        let new_vault_address = signer::address_of(vault_signer);
+
+        let new_vault = Vault {
             total_share_of_safety_vault: 0,
             total_share_of_risky_vault: 0,
             users_share_in_safety_vault: table::new<address, u64>(),
@@ -47,6 +67,23 @@ module delta_hedging::general_vault {
             fund_fee: init_i64(0, false),
             fund_fee_risky_rate_numerator: 0,
             fund_fee_risky_rate_denominator: 0,
+        };
+
+        move_to(vault_signer, new_vault);   
+
+        if (!exists<VaultRef>(DELTA_HEDGING)) {
+            move_to(signer, VaultRef {
+                vault_address: new_vault_address,
+                vault_extend_ref: extend_ref,
+            })
+        } else {
+            let vault_ref = borrow_global_mut<VaultRef>(DELTA_HEDGING);
+            vault_ref.vault_address = new_vault_address;
+            vault_ref.vault_extend_ref = extend_ref;
+        };
+
+        emit(CreateNewVault {
+            new_vault_address: new_vault_address
         });
     }
 
@@ -61,8 +98,9 @@ module delta_hedging::general_vault {
         };
     }
 
-    public entry fun deposit_risky_vault(signer: &signer, account: address, amount: u64, total_value: u64) acquires Vault {
-        let vault = borrow_global_mut<Vault>(DELTA_HEDGING);
+    public entry fun deposit_risky_vault(signer: &signer, account: address, amount: u64, total_value: u64) acquires Vault, VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
         let total_share_of_risky_vault = vault.total_share_of_risky_vault;
         let user_share = total_share_of_risky_vault * amount / total_value;
@@ -70,7 +108,7 @@ module delta_hedging::general_vault {
         update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, true);
         vault.total_share_of_risky_vault = total_share_of_risky_vault + user_share;
 
-        // TODO: update
+        transfer_usdc(signer, DELTA_HEDGING, amount);
 
         emit(Deposited {
             account,
@@ -79,8 +117,9 @@ module delta_hedging::general_vault {
         });
     }
 
-    public entry fun deposit_safety_vault(signer: &signer, account: address, amount: u64, total_value: u64) acquires Vault {
-        let vault = borrow_global_mut<Vault>(DELTA_HEDGING);
+    public entry fun deposit_safety_vault(signer: &signer, account: address, amount: u64, total_value: u64) acquires Vault, VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
         let total_share_of_safety_vault = vault.total_share_of_safety_vault;
         let user_share = total_share_of_safety_vault * amount / total_value;
@@ -88,8 +127,8 @@ module delta_hedging::general_vault {
         update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, true);
         vault.total_share_of_safety_vault = total_share_of_safety_vault + user_share;
 
-        // TODO: update
-
+        transfer_usdc(signer, DELTA_HEDGING, amount);
+        
         emit(Deposited {
             account,
             amount,
@@ -97,8 +136,9 @@ module delta_hedging::general_vault {
         });
     }
 
-    public entry fun withdraw_risky_vault(signer: &signer, account: address, amount: u64, total_value: u64) acquires Vault {
-        let vault = borrow_global_mut<Vault>(DELTA_HEDGING);
+    public entry fun withdraw_risky_vault(signer: &signer, account: address, amount: u64, total_value: u64) acquires Vault, VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
         let total_share_of_risky_vault = vault.total_share_of_risky_vault;
         let user_share = total_share_of_risky_vault * amount / total_value;
@@ -106,7 +146,10 @@ module delta_hedging::general_vault {
         update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
         vault.total_share_of_risky_vault = total_share_of_risky_vault - user_share;
 
-        // TODO: update
+        // TODO: update interact with stake&perp
+
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        transfer_usdc(vault_signer, account, amount);
 
         emit(Withdrawn {
             account,
@@ -115,8 +158,9 @@ module delta_hedging::general_vault {
         });
     }
 
-    public entry fun withdraw_safety_vault(signer: &signer, account: address, amount: u64, total_value: u64) acquires Vault {
-        let vault = borrow_global_mut<Vault>(DELTA_HEDGING);
+    public entry fun withdraw_safety_vault(signer: &signer, account: address, amount: u64, total_value: u64) acquires Vault, VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
         let total_share_of_safety_vault = vault.total_share_of_safety_vault;
         let user_share = total_share_of_safety_vault * amount / total_value;
@@ -124,7 +168,10 @@ module delta_hedging::general_vault {
         update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
         vault.total_share_of_safety_vault = total_share_of_safety_vault - user_share;
 
-        // TODO: update
+        // TODO: update interact with stake&perp
+        
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        transfer_usdc(vault_signer, account, amount);
 
         emit(Withdrawn {
             account,
@@ -133,18 +180,20 @@ module delta_hedging::general_vault {
         });
     }
 
-    fun fund_fee_risky(): I64 acquires Vault {
-        let fund_fee = borrow_global<Vault>(DELTA_HEDGING).fund_fee;
-        let risky_rate_numerator = borrow_global<Vault>(DELTA_HEDGING).fund_fee_risky_rate_numerator;
-        let risky_rate_denominator = borrow_global<Vault>(DELTA_HEDGING).fund_fee_risky_rate_denominator;
+    fun fund_fee_risky(): I64 acquires Vault, VaultRef {
+        let vault_address = borrow_global<VaultRef>(DELTA_HEDGING).vault_address;
+        let fund_fee = borrow_global<Vault>(vault_address).fund_fee;
+        let risky_rate_numerator = borrow_global<Vault>(vault_address).fund_fee_risky_rate_numerator;
+        let risky_rate_denominator = borrow_global<Vault>(vault_address).fund_fee_risky_rate_denominator;
 
         let fund_fee_risky = init_i64(get_value(fund_fee) * risky_rate_denominator / risky_rate_numerator, is_negative(fund_fee));
 
         fund_fee_risky
     }
 
-    fun fund_fee_after_risky(): I64 acquires Vault {
-        let fund_fee = borrow_global<Vault>(DELTA_HEDGING).fund_fee;
+    fun fund_fee_after_risky(): I64 acquires Vault, VaultRef {
+        let vault_address = borrow_global<VaultRef>(DELTA_HEDGING).vault_address;
+        let fund_fee = borrow_global<Vault>(vault_address).fund_fee;
         let fund_fee_after_risky = fund_fee_risky();
 
         sub(fund_fee, fund_fee_after_risky)
@@ -161,12 +210,13 @@ module delta_hedging::general_vault {
         init_i64(result, is_negative)
     }
 
-    public fun total_fund_fee_in_risky_vault(): I64 acquires Vault {
+    public fun total_fund_fee_in_risky_vault(): I64 acquires Vault, VaultRef {
         let fund_fee_after_risky = fund_fee_after_risky();
         let fund_fee_risky = fund_fee_risky();
         
-        let safety_vault = borrow_global<Vault>(DELTA_HEDGING).total_share_of_safety_vault;
-        let risky_vault = borrow_global<Vault>(DELTA_HEDGING).total_share_of_risky_vault;
+        let vault_address = borrow_global<VaultRef>(DELTA_HEDGING).vault_address;
+        let safety_vault = borrow_global<Vault>(vault_address).total_share_of_safety_vault;
+        let risky_vault = borrow_global<Vault>(vault_address).total_share_of_risky_vault;
     
         let result = get_value(fund_fee_risky) + get_value(fund_fee_after_risky) * risky_vault / (safety_vault + risky_vault);
         let is_negative = is_negative(fund_fee_risky);
@@ -174,13 +224,14 @@ module delta_hedging::general_vault {
         init_i64(result, is_negative)
     }
 
-    public fun total_fund_fee_in_safety_vault(): u64 acquires Vault {
+    public fun total_fund_fee_in_safety_vault(): u64 acquires Vault, VaultRef {
         let result: u64 = 0;
-        let fund_fee = borrow_global<Vault>(DELTA_HEDGING).fund_fee;
+        let vault_address = borrow_global<VaultRef>(DELTA_HEDGING).vault_address;
+        let fund_fee = borrow_global<Vault>(vault_address).fund_fee;
 
         if (!is_negative(fund_fee)) {
-            let safety_vault = borrow_global<Vault>(DELTA_HEDGING).total_share_of_safety_vault;
-            let risky_vault = borrow_global<Vault>(DELTA_HEDGING).total_share_of_risky_vault;
+            let safety_vault = borrow_global<Vault>(vault_address).total_share_of_safety_vault;
+            let risky_vault = borrow_global<Vault>(vault_address).total_share_of_risky_vault;
             
             let fund_fee_after_risky = fund_fee_after_risky();
             result = get_value(fund_fee_after_risky) * safety_vault / (safety_vault + risky_vault);
@@ -189,17 +240,19 @@ module delta_hedging::general_vault {
         result
     }
 
-    public entry fun set_fund_fee_risky_rate(signer: &signer, numerator: u64, denominator: u64) acquires Vault {
+    public entry fun set_fund_fee_risky_rate(signer: &signer, numerator: u64, denominator: u64) acquires Vault, VaultRef {
         only_admin(signer);
-        let vault = borrow_global_mut<Vault>(DELTA_HEDGING);
+        let vault_address = borrow_global<VaultRef>(DELTA_HEDGING).vault_address;
+        let vault = borrow_global_mut<Vault>(vault_address);
 
         vault.fund_fee_risky_rate_numerator = numerator;
         vault.fund_fee_risky_rate_denominator = denominator;
     }
 
-    public entry fun set_fund_fee(signer: &signer, value: u64, is_negative: bool) acquires Vault {
+    public entry fun set_fund_fee(signer: &signer, value: u64, is_negative: bool) acquires Vault, VaultRef {
         only_admin(signer);
-        let vault = borrow_global_mut<Vault>(DELTA_HEDGING);
+        let vault_address = borrow_global<VaultRef>(DELTA_HEDGING).vault_address;
+        let vault = borrow_global_mut<Vault>(vault_address);
         vault.fund_fee = init_i64(value, is_negative);
     }
 }
