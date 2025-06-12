@@ -17,6 +17,8 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
     use wrappedcoins::wrapped_coins::WrappedUSDC;
 
     const PRECISION: u128 = 100000000;
+    const LS_V0: u8 = 0;
+    const LS_V05: u8 = 5;
     // force 1 APT = 1 AMAPT
 
     public entry fun stake(
@@ -90,28 +92,29 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         );
     }
 
-    #[view]
-    public fun get_overall_staking_pool_price(
-    ): u64 {
-        let total_stake = DeltaHedgingStakingV2Storage::get_total_stake_view(); //stapt
-        let total_apt = DeltaHedgingStakingV2Storage::get_total_apt_view(); //apt
-        let amapt_apapt = ((total_stake as u128) * PRECISION / (stapt_token::stapt_price() as u128)) as u64;
-        let total_apt_price = amapt_apapt + total_apt;
-        if(total_apt_price == 0) {
-            0
-        } else {
-        // let price = multi_router::router::get_amount_out<
-        //     AptosCoin, 
-        //     WrappedUSDC, 
-        //     Uncorrelated
-        //     > (total_apt_price, 0x05);
-        total_apt_price
-        }
-    }
+    // #[view]
+    // public fun get_overall_staking_pool_price(
+    // ): u64 {
+    //     let total_stake = DeltaHedgingStakingV2Storage::get_total_stake_view(); //stapt
+    //     let total_apt = DeltaHedgingStakingV2Storage::get_total_apt_view(); //apt
+    //     let amapt_apapt = ((total_stake as u128) * PRECISION / (stapt_token::stapt_price() as u128)) as u64;
+    //     let total_apt_price = amapt_apapt + total_apt;
+    //     if(total_apt_price == 0) {
+    //         0
+    //     } else {
+    //     //  let price = multi_router::router::get_amount_out<
+    //     //      AptosCoin, 
+    //     //      WrappedUSDC, 
+    //     //      Uncorrelated
+    //     //      > (total_apt_price, LS_V05);
+    //     total_apt_price
+    //     }
+    // }
 
     public entry fun swap_APT_to_USDC(
         owner_signer: &signer,
-        amount: u64
+        amount: u64,
+        expected_amount_out: u64
     ) {
         let total_apt = DeltaHedgingStakingV2Storage::get_total_apt_view();
         assert!(total_apt >= amount, 1);
@@ -126,7 +129,6 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         //     WrappedUSDC, 
         //     Uncorrelated
         //     >(amount, 0x05);
-        let price = 1;
         multi_router::router::fa_swap_exact_coin_for_coin_x1<
             AptosCoin,
             WrappedUSDC,
@@ -135,9 +137,54 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         >(
             owner_signer,
             amount,
-            vector[price * 990 / 1000],
+            vector[expected_amount_out],
             vector[0x05],
             vector[true]
             );
+
+        let total_usdc = DeltaHedgingStakingV2Storage::get_total_usdc_view();
+        let new_total_usdc = total_usdc + expected_amount_out;
+        DeltaHedgingStakingV2Storage::set_total_usdc(
+            owner_signer,
+            new_total_usdc
+        );
+    }
+
+    public entry fun swap_USDC_to_APT(
+        owner_signer: &signer,
+        amount: u64,
+        expected_amount_out: u64
+    ) {
+        let total_usdc = DeltaHedgingStakingV2Storage::get_total_usdc_view();
+        let new_total_usdc = total_usdc - amount;
+        DeltaHedgingStakingV2Storage::set_total_usdc(
+            owner_signer,
+            new_total_usdc
+        );
+
+        // let price = multi_router::router::get_amount_out<
+        //     AptosCoin, 
+        //     WrappedUSDC, 
+        //     Uncorrelated
+        //     >(amount, 0x05);
+        multi_router::router::fa_swap_exact_coin_for_coin_x1<
+            WrappedUSDC,
+            AptosCoin,
+            Uncorrelated,
+            multi_router::router::BinStepV0V05
+        >(
+            owner_signer,
+            amount,
+            vector[expected_amount_out],
+            vector[0x05],
+            vector[true]
+            );
+
+        let total_apt = DeltaHedgingStakingV2Storage::get_total_apt_view();
+        let new_total_apt = total_apt + expected_amount_out;
+        DeltaHedgingStakingV2Storage::set_total_apt(
+            owner_signer,
+            new_total_apt
+        );
     }
 }

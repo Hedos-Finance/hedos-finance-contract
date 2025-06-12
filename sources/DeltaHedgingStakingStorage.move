@@ -11,7 +11,8 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
     struct StakeAdmin has key, store {
         admin: address,
         total_stapt: u64,
-        total_apt: u64
+        total_apt: u64,
+        total_usdc: u64
     }
     
     public entry fun init_stake_resources(
@@ -25,7 +26,8 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
         move_to(account, StakeAdmin {
             admin: account_addr,
             total_stapt: 0,
-            total_apt: 0
+            total_apt: 0,
+            total_usdc: 0
         });
 
     let userStakes = table::new<address, u64>();
@@ -59,6 +61,12 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
     public fun get_admin_view(): address acquires StakeAdmin {
         let storage = borrow_global<StakeAdmin>(@hello_aptos_network);
         storage.admin
+    }
+
+    #[view]
+    public fun get_total_usdc_view(): u64 acquires StakeAdmin {
+        let storage = borrow_global<StakeAdmin>(@hello_aptos_network);
+        storage.total_usdc
     }
 
     public entry fun set_user_stake(
@@ -100,6 +108,16 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
         assert!(owner == get_admin_view(), 1);
         let stake_admin = borrow_global_mut<StakeAdmin>(owner);
         stake_admin.total_apt = apt;
+    }
+
+    public entry fun set_total_usdc(
+        owner_signer: &signer,
+        usdc: u64
+    ) acquires StakeAdmin {
+        let owner = signer::address_of(owner_signer);
+        assert!(owner == get_admin_view(), 1);
+        let stake_admin = borrow_global_mut<StakeAdmin>(owner);
+        stake_admin.total_usdc = usdc;
     }
 }
 
