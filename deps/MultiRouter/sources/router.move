@@ -12,11 +12,4 @@ module multi_router::router {
     ) {
         abort(0);
     }
-
-    public fun get_amount_out<X, Y, Curve>(
-        amount_in: u64,
-        ls_version: u8
-    ): u64 {
-        abort(1)
-    }
 }

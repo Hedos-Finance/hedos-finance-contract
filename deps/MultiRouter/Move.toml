@@ -11,12 +11,4 @@ git = "https://github.com/pontem-network/liquidswap"
 rev = "bump-deps-and-update-ci"
 subdir = "liquidswap_router_v2"
 
-[dependencies.Liquidswap]
-git = 'https://github.com/pontem-network/liquidswap.git'
-rev = 'main'
-
-[dependencies.Liquidswapv05]
-Liquidswapv05       = { local = "../deps/Liquidswapv05" }
-
-
 [dev-dependencies]
