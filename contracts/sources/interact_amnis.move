@@ -21,4 +21,10 @@ module delta_hedging::interact_amnis{
             receiver
         );
     }
+
+    #[view]
+    public fun price_stAPT(): u64 {
+        // Call the stapt_price function from the amnis module
+        amnis::stapt_token::stapt_price()
+    }
 }

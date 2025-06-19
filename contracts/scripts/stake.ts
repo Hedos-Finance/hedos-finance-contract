@@ -9,34 +9,18 @@ import {
     NetworkToNetworkName,
     ViewRequest
 } from "@aptos-labs/ts-sdk";
-const ACCOUNT = "0b625e2c4582203073b54cded720782bd87b059ba98d8229177baf16b969c5d9";
-const MODULE = "interact_amnis";
 
-async function unstake() {
-    const signer = await getSigner();
-    const transaction = await aptos.transaction.build.simple(
-        {
-            sender: signer.accountAddress,
-            data: {
-                function: `${ACCOUNT}::${MODULE}::unstake_amAPT`,
-                functionArguments: [17_000_000, signer.accountAddress],
-            }
-        }
-    )
+const ACCOUNT = process.env.APTOS_ACCOUNT;
+const MODULE = "general_vault";
 
-    const committedTransaction = await aptos.signAndSubmitTransaction({ signer: signer, transaction });
-
-    const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
-    console.log(executedTransaction);
-}
 async function stake() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::stake`,
-                functionArguments: [20_000_000, signer.accountAddress],
+                function: `${ACCOUNT}::${MODULE}::liquid_staking`,
+                functionArguments: [10_000] ,
             }
         }
     )
@@ -47,22 +31,28 @@ async function stake() {
     console.log(executedTransaction);
 }
 
-async function price() {
-    const payload: ViewRequest = {
-        function: `${ACCOUNT}::${MODULE}::price_stAPT`,
-        typeArguments: [],
-        functionArguments: [],
-    };
-    const result = await aptos.view({payload});
 
-    console.log(`Giá stAPT: ${result}`);
+async function stakeAPT() {
+    const signer = await getSigner();
+    const transaction = await aptos.transaction.build.simple(
+        {
+            sender: signer.accountAddress,
+            data: {
+                function: `${ACCOUNT}::${MODULE}::liquid_staking_APT`,
+                functionArguments: [1_000_000, 20_000_000] ,
+            }
+        }
+    )
+
+    const committedTransaction = await aptos.signAndSubmitTransaction({ signer: signer, transaction });
+
+    const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
+    console.log(executedTransaction);
 }
 async function main() {
-    await price();
+    // await init();
+    await stakeAPT();
     // await stake();
-    // await unstake();
 }
-
-
 
 main();
