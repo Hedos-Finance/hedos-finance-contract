@@ -10,7 +10,8 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
     use amnis::amapt_token::AmnisApt;
 
     use aptos_framework::aptos_coin::AptosCoin;
-
+    use aptos_framework::fungible_asset::Metadata;
+    use aptos_framework::object::{Self};
 
     use liquidswap_v05::curves::Uncorrelated;
 
@@ -20,6 +21,12 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
     const LS_V0: u8 = 0;
     const LS_V05: u8 = 5;
     // force 1 APT = 1 AMAPT
+
+    const AMAPT_ADDRESS:    address = @fungible_AMAPT;
+    const APT_ADDRESS:      address = @fungible_APT;
+    const LZ_USDT_ADDRESS:  address = @fungible_lzUSDT;
+    const USDT_ADDRESS:     address = @fungible_USDT;
+    const USDC_ADDRESS:     address = @fungible_USDC;
 
     public entry fun stake(
         owner_signer: &signer,
@@ -95,6 +102,7 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         );
     }
 
+    // With Liquidswap V0.5
     #[view]
     public fun get_overall_staking_pool_price(
     ): u64 {
@@ -176,11 +184,6 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
             new_total_usdc
         );
 
-        // let price = multi_router::router::get_amount_out<
-        //     AptosCoin, 
-        //     WrappedUSDC, 
-        //     Uncorrelated
-        //     >(amount, 0x05);
         multi_router::router::fa_swap_exact_coin_for_coin_x1<
             WrappedUSDC,
             AptosCoin,
@@ -199,6 +202,48 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         DeltaHedgingStakingV2Storage::set_total_apt(
             owner_signer,
             new_total_apt
+        );
+    }
+    //
+
+
+
+    // With Cellana 
+
+    #[view]
+    public fun get_amounts_out_cellana(
+        amount_in: u64
+    ): u64 {
+        let amapt = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+        let ans = cellana::router::get_amounts_out(
+            amount_in,
+            amapt,
+            vector[APT_ADDRESS, LZ_USDT_ADDRESS, USDT_ADDRESS, USDC_ADDRESS],
+            vector[true, false, true, true]
+        );
+        ans
+    }
+
+    public entry fun swap_amAPT_to_USDC(
+        owner_signer: &signer,
+        amount: u64,
+    ) {
+        assert!(amount > 0, 0);
+        assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
+        
+        let amount_out_min = get_amounts_out_cellana(amount);
+
+        let apt = object::address_to_object<Metadata>(APT_ADDRESS);
+        let lz_usdt = object::address_to_object<Metadata>(LZ_USDT_ADDRESS);
+        let usdt = object::address_to_object<Metadata>(USDT_ADDRESS);
+        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+        cellana::router::swap_route_entry_from_coin<AmnisApt>(
+            owner_signer,
+            amount,
+            amount_out_min,
+            vector[apt, lz_usdt, usdt, usdc],
+            vector[true, false, true, true],
+            signer::address_of(owner_signer)
         );
     }
 }
