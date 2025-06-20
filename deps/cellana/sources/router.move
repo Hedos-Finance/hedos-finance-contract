@@ -14,6 +14,17 @@ module cellana::router {
         abort(0);
     }
 
+     public entry fun swap_route_entry_both_coins<FromCoin, ToCoin>(
+        user: &signer,
+        amount_in: u64,
+        amount_out_min: u64,
+        to_tokens: vector<Object<Metadata>>,
+        is_stables: vector<bool>,
+        recipient: address,
+    ) {
+        abort(0);
+    }
+
     #[view]
     public fun get_amounts_out(
         amount_in: u64,

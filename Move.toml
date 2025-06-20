@@ -4,7 +4,7 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-hello_aptos_network = "0x2dd28f1ff08e08e37db893bb3f6cb4cf8bac3edf2a7da96d2d2f4d8b8be428ff"
+hello_aptos_network = "0x0e69a8c2ee20552b88a9e7d9be52177ec168ededd6b5720f9c5b57ce825756c0"
 amnis               = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
 pancakeswap         = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
 aptos_framework     = "0x1"
