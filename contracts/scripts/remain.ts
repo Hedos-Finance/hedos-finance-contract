@@ -12,15 +12,15 @@ import {
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
 const MODULE = "general_vault";
-
-async function withdraw_risky() {
+const admin = "0x0b625e2c4582203073b54cded720782bd87b059ba98d8229177baf16b969c5d9";
+async function remain() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::withdraw_risky_vault`,
-                functionArguments: [signer.accountAddress, 2_000_000, 150, 500_000, 500_000],
+                function: `${ACCOUNT}::${MODULE}::swap_amAPT_remain`,
+                functionArguments: [signer.accountAddress, 40_248_000],
             }
         }
     )
@@ -31,8 +31,10 @@ async function withdraw_risky() {
     console.log(executedTransaction);
 }
 
+
+
 async function main() {
-    await withdraw_risky();
+    await remain();
 }
 
 main();

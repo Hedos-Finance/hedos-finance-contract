@@ -12,25 +12,7 @@ import {
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
 const MODULE = "general_vault";
-
-async function init() {
-    const signer = await getSigner();
-    const transaction = await aptos.transaction.build.simple(
-        {
-            sender: signer.accountAddress,
-            data: {
-                function: `${ACCOUNT}::${MODULE}::init_vault`,
-                functionArguments: [],
-            }
-        }
-    )
-
-    const committedTransaction = await aptos.signAndSubmitTransaction({ signer: signer, transaction });
-
-    const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
-    console.log(executedTransaction);
-}
-
+const token = "token"
 async function get_function() {
     let payload: ViewRequest;
     payload = {
@@ -70,9 +52,37 @@ async function get_function() {
     console.log("perp vault", `${result}`);
 
 }
+
+async function get_balance() {
+    let payload: ViewRequest;
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::get_apt_balance`,
+        typeArguments: [],
+        functionArguments: ["0x9686413a6e3058c175c6da220ada516fde4c499952767f475b6bb907555d1f4b"],
+    };
+    let result = await aptos.view({ payload });
+
+    console.log("address vault", `${result}`);
+
+
+}
+
+async function get_balance_usdc() {
+    let payload: ViewRequest;
+    payload = {
+        function: `${ACCOUNT}::${token}::get_usdc_balance`,
+        typeArguments: [],
+        functionArguments: ["0x9686413a6e3058c175c6da220ada516fde4c499952767f475b6bb907555d1f4b"],
+    };
+    let result = await aptos.view({ payload });
+
+    console.log("address vault", `${result}`);
+
+
+}
 async function main() {
-    await init();
-    // await get_function();
+    // await get_balance();
+    await get_balance_usdc();
 }
 
 main();

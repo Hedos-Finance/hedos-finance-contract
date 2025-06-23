@@ -11,14 +11,14 @@ module delta_hedging::white_list {
         admin_list: SmartVector<address>,
     }
 
-    public fun init_white_list(signer: &signer) {
+    public entry fun init_white_list(signer: &signer) {
         assert!(signer::address_of(signer) == DELTA_HEDGING, NOT_DELTA_HEDGING);
         let white_list = smart_vector::new<address>();
         smart_vector::push_back(&mut white_list, DELTA_HEDGING);
         move_to(signer, WhiteList { admin_list: white_list });
     }
 
-    public fun add_admin(signer: &signer, admin: address) acquires WhiteList {
+    public entry fun add_admin(signer: &signer, admin: address) acquires WhiteList {
         only_admin(signer);
         let (found, _) = smart_vector::index_of(&borrow_global<WhiteList>(DELTA_HEDGING).admin_list, &admin);
         if (!found) {
@@ -26,7 +26,7 @@ module delta_hedging::white_list {
         }
     }
 
-    public fun remove_admin(signer: &signer, admin: address) acquires WhiteList {
+    public entry fun remove_admin(signer: &signer, admin: address) acquires WhiteList {
         only_admin(signer);
         let (found, index) = smart_vector::index_of(&borrow_global<WhiteList>(DELTA_HEDGING).admin_list, &admin);
         if (found) {
