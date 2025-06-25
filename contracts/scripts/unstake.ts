@@ -12,15 +12,15 @@ import {
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
 const MODULE = "general_vault";
-const admin = "0x0b625e2c4582203073b54cded720782bd87b059ba98d8229177baf16b969c5d9";
-async function remain() {
+
+async function unstake() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::swap_amAPT_remain`,
-                functionArguments: [signer.accountAddress, 2_000_000],
+                function: `${ACCOUNT}::${MODULE}::liquid_staking_unstake_all`,
+                functionArguments: [] ,
             }
         }
     )
@@ -32,9 +32,8 @@ async function remain() {
 }
 
 
-
 async function main() {
-    await remain();
+   await unstake();
 }
 
 main();

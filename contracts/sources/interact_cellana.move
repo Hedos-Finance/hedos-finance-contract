@@ -61,6 +61,20 @@ module delta_hedging::interact_cellana {
         ans
     }
 
+    #[view]
+    public fun get_amounts_out_USDC_amAPT_cellana(
+        amount_in: u64
+    ): u64 {
+        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+        let ans = cellana::router::get_amounts_out(
+            amount_in,
+            usdc,
+            vector[APT_ADDRESS, AMAPT_ADDRESS],
+            vector[false, true]
+        );
+        ans
+    }
+
     public entry fun swap_USDC_to_APT(signer: &signer, amount_in: u64) {
         assert!(amount_in > 0, 0);
 

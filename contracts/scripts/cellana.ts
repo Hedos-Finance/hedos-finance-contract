@@ -84,7 +84,7 @@ async function swap_amAPT_USDC() {
             sender: signer.accountAddress,
             data: {
                 function: `${ACCOUNT}::${MODULE}::swap_amAPT_to_USDC`,
-                functionArguments: [10_000]
+                functionArguments: [100_000]
             }
         }
     )
@@ -107,9 +107,9 @@ async function get_function() {
 
 async function main() {
     // await get_function();
-    await swap_USDC_APT();
+    // await swap_USDC_APT();
     // await cellana_swap_USDC_APT();
-    // await swap_amAPT_USDC();
+    await swap_amAPT_USDC();
 }
 
 main();
