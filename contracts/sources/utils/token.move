@@ -4,7 +4,6 @@ module delta_hedging::token {
     use aptos_framework::object::{Self};
     use aptos_framework::primary_fungible_store;
 
-    use delta_hedging::general_vault::{get_amAPT_balance, get_stAPT_balance, get_apt_balance};
     const USDC_ADDRESS: address = @USDC;
 
     public entry fun transfer_usdc(

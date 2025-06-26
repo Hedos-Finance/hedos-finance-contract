@@ -65,4 +65,12 @@ module delta_hedging::math {
 
         I64 { value: result, is_negative }
     }
+
+    public fun safe_sub(a: u64, b: u64): u64 {
+        if (a > b) {
+            a - b
+        } else {
+            0
+        }
+    }
 }

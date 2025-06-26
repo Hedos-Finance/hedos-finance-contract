@@ -31,6 +31,23 @@ async function init() {
     console.log(executedTransaction);
 }
 
+async function init_fund_fee() {
+    const signer = await getSigner();
+    const transaction = await aptos.transaction.build.simple(
+        {
+            sender: signer.accountAddress,
+            data: {
+                function: `${ACCOUNT}::${MODULE}::set_fund_fee_risky_rate`,
+                functionArguments: [3,10],
+            }
+        }
+    )
+
+    const committedTransaction = await aptos.signAndSubmitTransaction({ signer: signer, transaction });
+
+    const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
+    console.log(executedTransaction);
+}
 async function get_function() {
     let payload: ViewRequest;
     payload = {
@@ -70,8 +87,23 @@ async function get_function() {
     console.log("perp vault", `${result}`);
 
 }
+
+async function get_function_fund_fee() {
+    let payload: ViewRequest;
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::fund_fee_ratio`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    let result = await aptos.view({ payload });
+
+    console.log("result", `${result}`);
+
+}
 async function main() {
-    await init();
+    // await init();
+    // await init_fund_fee();
+    await get_function_fund_fee();
     // await get_function();
 }
 
