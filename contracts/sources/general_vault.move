@@ -9,7 +9,7 @@ module delta_hedging::general_vault {
     use std::signer::{Self};
     use std::string::{String};
     
-    use delta_hedging::math::{I64, init_i64, get_value, is_negative, add, sub};
+    use delta_hedging::math::{I64, init_i64, get_value, is_negative, add, sub, safe_sub};
     use delta_hedging::white_list::{only_admin};
     use delta_hedging::token::{transfer_usdc, get_usdc_balance};
     use delta_hedging::interact_merkle_trade::{simple_trade};
@@ -349,7 +349,8 @@ module delta_hedging::general_vault {
 
         let amountOut = usdc_after - usdc_before;
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
-        vault.total_perpeptual -= amountOut;
+        // vault.total_perpeptual -= amountOut;
+        vault.total_perpeptual = safe_sub(vault.total_perpeptual, amountOut);
         emit(ClosePerp {
             collateral_delta: amountOut,
             leverage,
@@ -454,9 +455,13 @@ module delta_hedging::general_vault {
 
         update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
         update_share_table(&mut vault.users_amount_in_risky_vault, account, amount_withdraw, false);
-        vault.total_value_lock -= amount_withdraw;
-        vault.total_share_of_risky_vault -= user_share;
-        vault.total_perpeptual -= usdc_after_close - usdc_before;
+
+        // vault.total_value_lock -= amount_withdraw;
+        // vault.total_share_of_risky_vault -= user_share;
+        // vault.total_perpeptual -= usdc_after_close - usdc_before;
+        vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
+        vault.total_share_of_risky_vault = safe_sub(vault.total_value_lock, user_share);
+        vault.total_perpeptual = safe_sub(vault.total_value_lock, usdc_after_close - usdc_before);
         
         let fund_fee = table::borrow(&vault.users_amount_fee_in_risky_vault, account);
         let fund_fee_risky_before = init_i64(get_value(*fund_fee), is_negative(*fund_fee));
@@ -504,9 +509,12 @@ module delta_hedging::general_vault {
 
         update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
         update_share_table(&mut vault.users_amount_in_safety_vault, account, amount_withdraw, false);
-        vault.total_value_lock -= amount_withdraw;
-        vault.total_share_of_risky_vault -= user_share;
-        vault.total_perpeptual -= usdc_after_close - usdc_before;
+        // vault.total_value_lock -= amount_withdraw;
+        // vault.total_share_of_risky_vault -= user_share;
+        // vault.total_perpeptual -= usdc_after_close - usdc_before;
+        vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
+        vault.total_share_of_risky_vault = safe_sub(vault.total_value_lock, user_share);
+        vault.total_perpeptual = safe_sub(vault.total_value_lock, usdc_after_close - usdc_before);
         
         // funding fee calculate
         let fund_fee = table::borrow(&vault.users_amount_fee_in_safety_vault, account);
