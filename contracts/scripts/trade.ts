@@ -10,7 +10,7 @@ async function main() {
             sender: signer.accountAddress,
             data: {
                 function: `${ACCOUNT}::${MODULE}::simple_trade`,
-                functionArguments: [signer.accountAddress, 2_300_000, 150, false, "APT_USD"],
+                functionArguments: [signer.accountAddress, 200_000, 150, true, "APT_USD"],
             }
         }
     )

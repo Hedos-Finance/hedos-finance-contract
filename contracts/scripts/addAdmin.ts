@@ -21,7 +21,7 @@ async function white_list() {
             sender: signer.accountAddress,
             data: {
                 function: `${ACCOUNT}::${MODULE}::add_admin`,
-                functionArguments: [admin2],
+                functionArguments: [admin],
             }
         }
     )

@@ -1,23 +1,23 @@
-module delta_hedging::math {
-    struct I64 has copy, drop, store {
-        value: u64,
+module delta_hedging::math256 {
+    struct I256 has copy, drop, store {
+        value: u256,
         is_negative: bool,
     }
 
-    public fun init_i64(value: u64, is_negative: bool): I64 {
-        I64 { value, is_negative }
+    public fun init_i256(value: u256, is_negative: bool): I256 {
+        I256 { value, is_negative }
     }
 
-    public fun get_value(a: I64): u64 {
+    public fun get_value_256(a: I256): u256 {
         a.value
     }
 
-    public fun is_negative(a: I64): bool {
+    public fun is_negative_256(a: I256): bool {
         a.is_negative
     }
 
-    public fun add(a: I64, b: I64): I64 {
-        let result: u64;
+    public fun add_256(a: I256, b: I256): I256 {
+        let result: u256;
         let is_negative: bool;
 
         if (a.is_negative == b.is_negative) {
@@ -37,11 +37,11 @@ module delta_hedging::math {
         if (result == 0) {
             is_negative = false;
         };
-        I64 { value: result, is_negative }
+        I256 { value: result, is_negative }
     }
 
-    public fun sub(a: I64, b: I64): I64 {
-        let result: u64;
+    public fun sub_256(a: I256, b: I256): I256 {
+        let result: u256;
         let is_negative: bool;
 
         if (a.is_negative != b.is_negative) {
@@ -63,15 +63,14 @@ module delta_hedging::math {
             is_negative = false;
         };
 
-        I64 { value: result, is_negative }
+        I256 { value: result, is_negative }
     }
-
-    public fun safe_sub(a: u64, b: u64): u64 {
+    
+    public fun safe_sub_u256(a: u256, b: u256): u256 {
         if (a > b) {
             a - b
         } else {
             0
         }
     }
-    
 }

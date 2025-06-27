@@ -19,8 +19,8 @@ async function deposit() {
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::deposit_risky_vault`,
-                functionArguments: [signer.accountAddress, 10_000, 6_350_877, 0, false],
+                function: `${ACCOUNT}::${MODULE}::deposit_safety_vault`,
+                functionArguments: [signer.accountAddress, 2_100_000, 6_808_405, 0, false],
             }
         }
     )

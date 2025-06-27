@@ -101,9 +101,9 @@ async function get_function_fund_fee() {
 
 }
 async function main() {
-    // await init();
+    await init();
     // await init_fund_fee();
-    await get_function_fund_fee();
+    // await get_function_fund_fee();
     // await get_function();
 }
 

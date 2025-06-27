@@ -53,6 +53,20 @@ async function get_function() {
 
 }
 
+async function get_total_share() {
+    let payload: ViewRequest;
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::total_share`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    let result = await aptos.view({ payload });
+
+    console.log("address vault", `${result}`);
+
+
+}
+
 async function get_balance() {
     let payload: ViewRequest;
     payload = {
@@ -93,8 +107,9 @@ async function get_total_stake() {
 async function main() {
     // await get_balance();
     // await get_balance_usdc();
-    await get_total_stake();
-    // await get_function();
+    // await get_total_stake();
+    await get_function();
+    // await get_total_share();
 }
 
 main();
