@@ -92,8 +92,8 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
             owner_signer,
             amount,
             amount_out_min,
-            vector[apt, lz_usdt, usdt, usdc],
-            vector[true, false, true, true],
+            vector[apt, usdc],
+            vector[true, false],
             signer::address_of(owner_signer)
         );
     }

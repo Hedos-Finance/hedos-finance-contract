@@ -96,8 +96,8 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
         cellana::router::get_amounts_out(
             amount,
             apt,
-            vector[LZ_USDT_ADDRESS, USDT_ADDRESS, USDC_ADDRESS],
-            vector[false, true, true]
+            vector[USDC_ADDRESS],
+            vector[false]
         )
     }
 
@@ -109,8 +109,8 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
         cellana::router::get_amounts_out(
             amount,
             amapt,
-            vector[APT_ADDRESS, LZ_USDT_ADDRESS, USDT_ADDRESS, USDC_ADDRESS],
-            vector[true, false, true, true]
+            vector[APT_ADDRESS, USDC_ADDRESS],
+            vector[true, false]
         )
     }
 
