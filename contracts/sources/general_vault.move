@@ -27,6 +27,7 @@ module delta_hedging::general_vault {
     use std::string;
 
     const NOT_ENOUGH_SHARE: u64 = 997;
+    const NOT_ENOUGH_FUND_FEE: u64 = 996;
 
     fun get_pair(): string::String {
         string::utf8(b"APT_USD")
@@ -469,7 +470,12 @@ module delta_hedging::general_vault {
 
         let fund_fee = get_value_256(funding_fee) as u64;
         // update_fund_fee_table(&mut vault.users_amount_fee_in_risky_vault, account, _value, _is_negative);
-        transfer_usdc(vault_signer, account, amount_withdraw + fund_fee);
+        if (is_negative_256(funding_fee)) {
+            assert!(fund_fee <= amount_withdraw, NOT_ENOUGH_FUND_FEE);
+            transfer_usdc(vault_signer, account, amount_withdraw - fund_fee);
+        } else {
+            transfer_usdc(vault_signer, account, amount_withdraw + fund_fee);
+        };
 
         emit(Withdraw {
             account,
@@ -539,7 +545,7 @@ module delta_hedging::general_vault {
         });
     }
 
-   fun fund_fee_risky(value: u256, is_negative: bool): I256 acquires Vault, VaultRef {
+    fun fund_fee_risky(value: u256, is_negative: bool): I256 acquires Vault, VaultRef {
         let fund_fee = init_i256(value, is_negative);
         let vault_address = borrow_global<VaultRef>(DELTA_HEDGING).vault_address;
         // let fund_fee = borrow_global<Vault>(vault_address).fund_fee;
