@@ -283,8 +283,10 @@ module delta_hedging::general_vault {
         } else user_share = (total_share * (amount as u256)) / total_value;
 
         update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, true);
-        // update_share_table(&mut vault.users_amount_in_risky_vault, account, amount, true);
-        update_fund_fee_table(&mut vault.users_amount_fee_in_risky_vault, account, _value, _is_negative);
+        
+        if(!table::contains(&vault.users_amount_fee_in_risky_vault, account))
+            update_fund_fee_table(&mut vault.users_amount_fee_in_risky_vault, account, _value, _is_negative);
+
         vault.total_value_lock += amount;
         vault.total_share_of_risky_vault += user_share;
 
@@ -308,8 +310,9 @@ module delta_hedging::general_vault {
         } else user_share = (total_share * (amount as u256)) / total_value;
 
         update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, true);
-        // update_share_table(&mut vault.users_amount_in_safety_vault, account, amount, true);
-        update_fund_fee_table(&mut vault.users_amount_fee_in_safety_vault, account, _value, _is_negative);
+        
+        if(!table::contains(&vault.users_amount_fee_in_safety_vault, account))
+            update_fund_fee_table(&mut vault.users_amount_fee_in_safety_vault, account, _value, _is_negative);
 
         vault.total_value_lock += amount;
         vault.total_share_of_safety_vault += user_share;
@@ -455,9 +458,7 @@ module delta_hedging::general_vault {
         let user_share = total_share * (amount_withdraw as u256) / total_value;
 
         update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
-
-        if(!table::contains(&vault.users_amount_fee_in_risky_vault, account))
-            update_fund_fee_table(&mut vault.users_amount_fee_in_risky_vault, account, _value, _is_negative);
+        update_fund_fee_table(&mut vault.users_amount_fee_in_risky_vault, account, _value, _is_negative);
 
         vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
         vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
@@ -471,7 +472,7 @@ module delta_hedging::general_vault {
         let funding_fee = calc_fund_fee(fund_fee_delta, user_share, total_share);
 
         let fund_fee = get_value_256(funding_fee) as u64;
-        // update_fund_fee_table(&mut vault.users_amount_fee_in_risky_vault, account, _value, _is_negative);
+        
         if (is_negative_256(funding_fee)) {
             assert!(fund_fee <= amount_withdraw, NOT_ENOUGH_FUND_FEE);
             transfer_usdc(vault_signer, account, amount_withdraw - fund_fee);
@@ -515,11 +516,8 @@ module delta_hedging::general_vault {
         let user_share = total_share * (amount_withdraw as u256) / total_value;
 
         update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
-
-        if(!table::contains(&vault.users_amount_fee_in_safety_vault, account))
-            update_fund_fee_table(&mut vault.users_amount_fee_in_safety_vault, account, _value, _is_negative);
-        // update_share_table(&mut vault.users_amount_in_safety_vault, account, amount_withdraw, false);
-      
+        update_fund_fee_table(&mut vault.users_amount_fee_in_safety_vault, account, _value, _is_negative);
+        
         vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
         vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
         vault.total_perpeptual = safe_sub(vault.total_perpeptual, usdc_after_close - usdc_before);
@@ -537,9 +535,7 @@ module delta_hedging::general_vault {
 
         let fund_fee = get_value_256(funding_fee) as u64;
         transfer_usdc(vault_signer, account, amount_withdraw + fund_fee);
-        // update_fund_fee_table(&mut vault.users_amount_fee_in_safety_vault, account, _value, _is_negative);
-        // transfer_usdc(vault_signer, account, amount_withdraw + get_value_256(funding_fee));
-
+      
         emit(Withdraw {
             account,
             amount: amount_withdraw,
