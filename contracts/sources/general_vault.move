@@ -9,7 +9,8 @@ module delta_hedging::general_vault {
     use std::signer::{Self};
     use std::string::{String};
     
-    use delta_hedging::math::{I64, init_i64, get_value, is_negative, sub, safe_sub};
+    // use delta_hedging::math::{I64, init_i64, get_value, is_negative, sub, safe_sub};
+    use delta_hedging::math::{safe_sub};
     use delta_hedging::math256::{I256, init_i256, get_value_256, is_negative_256, sub_256, safe_sub_u256};
 
     use delta_hedging::white_list::{only_admin};
@@ -210,7 +211,7 @@ module delta_hedging::general_vault {
     }
     
     public entry fun init_vault(signer: &signer) acquires VaultRef {
-        // only_admin(signer);
+        only_admin(signer);
         let constructor_ref = &object::create_object(DELTA_HEDGING);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -454,8 +455,9 @@ module delta_hedging::general_vault {
         let user_share = total_share * (amount_withdraw as u256) / total_value;
 
         update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
-        update_fund_fee_table(&mut vault.users_amount_fee_in_risky_vault, account, _value, _is_negative);
-        // update_share_table(&mut vault.users_amount_in_risky_vault, account, (amount_withdraw as u256), false);
+
+        if(!table::contains(&vault.users_amount_fee_in_risky_vault, account))
+            update_fund_fee_table(&mut vault.users_amount_fee_in_risky_vault, account, _value, _is_negative);
 
         vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
         vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
@@ -513,7 +515,9 @@ module delta_hedging::general_vault {
         let user_share = total_share * (amount_withdraw as u256) / total_value;
 
         update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
-        update_fund_fee_table(&mut vault.users_amount_fee_in_safety_vault, account, _value, _is_negative);
+
+        if(!table::contains(&vault.users_amount_fee_in_safety_vault, account))
+            update_fund_fee_table(&mut vault.users_amount_fee_in_safety_vault, account, _value, _is_negative);
         // update_share_table(&mut vault.users_amount_in_safety_vault, account, amount_withdraw, false);
       
         vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);

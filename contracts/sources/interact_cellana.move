@@ -41,8 +41,8 @@ module delta_hedging::interact_cellana {
         let ans = cellana::router::get_amounts_out(
             amount_in,
             amapt,
-            vector[APT_ADDRESS, LZ_USDT_ADDRESS, USDT_ADDRESS, USDC_ADDRESS],
-            vector[true, false, true, true]
+            vector[APT_ADDRESS, USDC_ADDRESS],
+            vector[true, false]
         );
         ans
     }
@@ -71,6 +71,20 @@ module delta_hedging::interact_cellana {
             usdc,
             vector[APT_ADDRESS, AMAPT_ADDRESS],
             vector[false, true]
+        );
+        ans
+    }
+
+    #[view]
+    public fun get_amounts_out_amAPT_APT_cellana(
+        amount_in: u64
+    ): u64 {
+        let amapt = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+        let ans = cellana::router::get_amounts_out(
+            amount_in,
+            amapt,
+            vector[APT_ADDRESS],
+            vector[true]
         );
         ans
     }
@@ -118,15 +132,13 @@ module delta_hedging::interact_cellana {
         let amount_out_min = get_amounts_out_APT_USDC_cellana(amount);
 
         let apt = object::address_to_object<Metadata>(APT_ADDRESS);
-        let lz_usdt = object::address_to_object<Metadata>(LZ_USDT_ADDRESS);
-        let usdt = object::address_to_object<Metadata>(USDT_ADDRESS);
         let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
         router::swap_route_entry_from_coin<AmnisApt>(
             signer,
             amount,
             amount_out_min,
-            vector[apt, lz_usdt, usdt, usdc],
-            vector[true, false, true, true],
+            vector[apt, usdc],
+            vector[true, false],
             signer::address_of(signer)
         );
     }

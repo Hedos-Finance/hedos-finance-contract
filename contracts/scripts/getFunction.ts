@@ -15,12 +15,13 @@ const MODULE = "general_vault";
 const token = "token"
 async function get_function() {
     let payload: ViewRequest;
+    let result;
     payload = {
         function: `${ACCOUNT}::${MODULE}::get_vault_address`,
         typeArguments: [],
         functionArguments: [],
     };
-    let result = await aptos.view({ payload });
+    result = await aptos.view({ payload });
 
     console.log("address vault", `${result}`);
 
@@ -33,14 +34,14 @@ async function get_function() {
 
     // console.log("TVL vault", `${result}`);
 
-    // payload = {
-    //     function: `${ACCOUNT}::${MODULE}::get_total_staked`,
-    //     typeArguments: [],
-    //     functionArguments: [],
-    // };
-    // result = await aptos.view({ payload });
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::get_total_staked`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    result = await aptos.view({ payload });
 
-    // console.log("staked vault", `${result}`);
+    console.log("staked vault", `${result}`);
 
     //     payload = {
     //     function: `${ACCOUNT}::${MODULE}::get_total_perpeptual`,
