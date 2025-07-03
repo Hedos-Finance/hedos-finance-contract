@@ -28,7 +28,7 @@ module delta_hedging::fund_fee {
         let fund_risky = fund_fee.fund_fee_risky;
         (get_value_256(fund_risky), is_negative_256(fund_risky))
     }
-ý
+
     public fun update_fund_fee(fund_all: I256, fund_safety: u256, fund_risky: I256) acquires FundFee{
         let fund_fee = borrow_global_mut<FundFee>(DELTA_HEDGING);
         fund_fee.fund_fee_all = fund_all;
