@@ -30,11 +30,31 @@ async function init_fee() {
     console.log(executedTransaction);
 }
 
+async function view_fee() {
+    let payload;
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::fund_fee_safety`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    let result = await aptos.view({ payload });
+
+    console.log("", `${result}`);
+
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::fund_fee_risky`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    result = await aptos.view({ payload });
+
+    console.log("", `${result}`);
+}
 
 async function main() {
-    await init_fee();
-    // await init_fund_fee();
-   
+    // await init_fee();
+    await view_fee();
+
 }
 
 main();

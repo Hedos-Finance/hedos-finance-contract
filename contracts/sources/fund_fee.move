@@ -1,7 +1,7 @@
 module delta_hedging::fund_fee {
 
     use delta_hedging::white_list::{only_admin};
-    use delta_hedging::math256::{I256, init_i256};
+    use delta_hedging::math256::{I256, init_i256, get_value_256, is_negative_256};
     const DELTA_HEDGING: address = @delta_hedging;
 
     struct FundFee has key {
@@ -16,6 +16,19 @@ module delta_hedging::fund_fee {
         (fund_fee.fund_fee_all, fund_fee.fund_fee_safety, fund_fee.fund_fee_risky)
     }
 
+    #[view]
+    public fun fund_fee_safety(): u256 acquires FundFee {
+        let fund_fee = borrow_global<FundFee>(DELTA_HEDGING);
+        fund_fee.fund_fee_safety
+    }
+
+    #[view]
+    public fun fund_fee_risky(): (u256, bool) acquires FundFee {
+        let fund_fee = borrow_global<FundFee>(DELTA_HEDGING);
+        let fund_risky = fund_fee.fund_fee_risky;
+        (get_value_256(fund_risky), is_negative_256(fund_risky))
+    }
+ý
     public fun update_fund_fee(fund_all: I256, fund_safety: u256, fund_risky: I256) acquires FundFee{
         let fund_fee = borrow_global_mut<FundFee>(DELTA_HEDGING);
         fund_fee.fund_fee_all = fund_all;
