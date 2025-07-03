@@ -1,4 +1,3 @@
-import { ViewRequest } from "@aptos-labs/ts-sdk";
 import { aptos, getSigner } from "./aptos_utils";
 
 // const ACCOUNT = "0b625e2c4582203073b54cded720782bd87b059ba98d8229177baf16b969c5d9";
@@ -84,7 +83,7 @@ async function swap_amAPT_USDC() {
             sender: signer.accountAddress,
             data: {
                 function: `${ACCOUNT}::${MODULE}::swap_amAPT_to_USDC`,
-                functionArguments: [100_000]
+                functionArguments: [10_000]
             }
         }
     )
@@ -94,16 +93,7 @@ async function swap_amAPT_USDC() {
     const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
     console.log(executedTransaction);
 }
-async function get_function() {
-    const payload: ViewRequest = {
-        function: `${ACCOUNT}::${MODULE}::get_amounts_out_APT_USDC_cellana`,
-        typeArguments: [],
-        functionArguments: [200_000_000],
-    };
-    const result = await aptos.view({ payload });
 
-    console.log(`${result}`);
-}
 
 async function main() {
     // await get_function();

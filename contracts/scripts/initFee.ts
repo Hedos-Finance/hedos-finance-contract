@@ -6,21 +6,20 @@ import {
     Ed25519PrivateKey,
     HexInput,
     Network,
-    NetworkToNetworkName,
-
+    NetworkToNetworkName
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
-const MODULE = "general_vault";
+const MODULE = "fund_fee";
 
-async function open_perp() {
+async function init_fee() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::open_position`,
-                functionArguments: [2_000_000, 150],
+                function: `${ACCOUNT}::${MODULE}::init_fund_fee`,
+                functionArguments: [],
             }
         }
     )
@@ -33,8 +32,9 @@ async function open_perp() {
 
 
 async function main() {
-    // await init();
-    await open_perp();
+    await init_fee();
+    // await init_fund_fee();
+   
 }
 
 main();

@@ -9,12 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aptos-labs/ts-sdk": "^1.9.1-tmp.2",
+    "@aptos-labs/ts-sdk": "^1.39.0",
+    "@merkletrade/ts-sdk": "1.0.3",
     "dotenv": "^16.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",
     "ts-node": "^10.9.2",
+    "@merkletrade/ts-sdk": "1.0.3",
     "typescript": "^5.8.3"
   }
 }

@@ -18,8 +18,13 @@ module delta_hedging::token {
     #[view]
     public fun get_usdc_balance(account: address): u64{
         let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
-        let balance = primary_fungible_store::balance<Metadata>(account, usdc);
-        balance
+        // let balance = primary_fungible_store::balance<Metadata>(account, usdc);
+        // balance
+        if (!primary_fungible_store::is_frozen<Metadata>(account, usdc)) {
+            primary_fungible_store::balance<Metadata>(account, usdc)
+        } else {
+            0
+        }
     }
 
     

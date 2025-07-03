@@ -7,7 +7,6 @@ import {
     HexInput,
     Network,
     NetworkToNetworkName,
-    ViewRequest
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;

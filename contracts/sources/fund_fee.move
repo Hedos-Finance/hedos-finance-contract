@@ -1,0 +1,46 @@
+module delta_hedging::fund_fee {
+
+    use delta_hedging::white_list::{only_admin};
+    use delta_hedging::math256::{I256, init_i256};
+    const DELTA_HEDGING: address = @delta_hedging;
+
+    struct FundFee has key {
+        fund_fee_all: I256,
+        fund_fee_safety: u256,
+        fund_fee_risky: I256
+    }
+
+    #[view]
+    public fun fund_fee_current(): (I256, u256, I256) acquires FundFee {
+        let fund_fee = borrow_global<FundFee>(DELTA_HEDGING);
+        (fund_fee.fund_fee_all, fund_fee.fund_fee_safety, fund_fee.fund_fee_risky)
+    }
+
+    public fun update_fund_fee(fund_all: I256, fund_safety: u256, fund_risky: I256) acquires FundFee{
+        let fund_fee = borrow_global_mut<FundFee>(DELTA_HEDGING);
+        fund_fee.fund_fee_all = fund_all;
+        fund_fee.fund_fee_safety = fund_safety;
+        fund_fee.fund_fee_risky = fund_risky;
+    }
+
+    public fun set_fund_fee_zero() acquires FundFee{
+        let fund_fee = borrow_global_mut<FundFee>(DELTA_HEDGING);
+        fund_fee.fund_fee_all = init_i256(0, false);
+        fund_fee.fund_fee_safety = 0;
+        fund_fee.fund_fee_risky = init_i256(0, false);
+    }
+
+    public entry fun init_fund_fee(
+        signer: &signer
+    ) {
+        only_admin(signer);
+        let fund_fee_new = FundFee {
+            fund_fee_all: init_i256(0, false),
+            fund_fee_safety: 0,
+            fund_fee_risky: init_i256(0, false)
+        };
+
+        move_to(signer, fund_fee_new);   
+    }
+
+}

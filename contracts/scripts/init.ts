@@ -6,8 +6,7 @@ import {
     Ed25519PrivateKey,
     HexInput,
     Network,
-    NetworkToNetworkName,
-    ViewRequest
+    NetworkToNetworkName
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
@@ -49,7 +48,7 @@ async function init_fund_fee() {
     console.log(executedTransaction);
 }
 async function get_function() {
-    let payload: ViewRequest;
+    let payload;
     payload = {
         function: `${ACCOUNT}::${MODULE}::get_vault_address`,
         typeArguments: [],
@@ -89,7 +88,7 @@ async function get_function() {
 }
 
 async function get_function_fund_fee() {
-    let payload: ViewRequest;
+    let payload;
     payload = {
         function: `${ACCOUNT}::${MODULE}::fund_fee_ratio`,
         typeArguments: [],
@@ -101,8 +100,8 @@ async function get_function_fund_fee() {
 
 }
 async function main() {
-    await init();
-    // await init_fund_fee();
+    // await init();
+    await init_fund_fee();
     // await get_function_fund_fee();
     // await get_function();
 }

@@ -6,8 +6,7 @@ import {
     Ed25519PrivateKey,
     HexInput,
     Network,
-    NetworkToNetworkName,
-    ViewRequest
+    NetworkToNetworkName
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;

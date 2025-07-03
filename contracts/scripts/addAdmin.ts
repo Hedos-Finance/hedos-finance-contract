@@ -6,8 +6,7 @@ import {
     Ed25519PrivateKey,
     HexInput,
     Network,
-    NetworkToNetworkName,
-    ViewRequest
+    NetworkToNetworkName
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
@@ -51,8 +50,8 @@ async function init_white_list() {
 }
 
 async function main() {
-    // await init_white_list();
-    await white_list();
+    await init_white_list();
+    // await white_list();
 }
 
 main();

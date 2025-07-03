@@ -6,15 +6,15 @@ import {
     Ed25519PrivateKey,
     HexInput,
     Network,
-    NetworkToNetworkName,
-    ViewRequest
+    NetworkToNetworkName
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
 const MODULE = "general_vault";
-const token = "token"
+const token = "token";
+const address_user = "0b625e2c4582203073b54cded720782bd87b059ba98d8229177baf16b969c5d9";
 async function get_function() {
-    let payload: ViewRequest;
+    let payload;
     let result;
     payload = {
         function: `${ACCOUNT}::${MODULE}::get_vault_address`,
@@ -25,14 +25,14 @@ async function get_function() {
 
     console.log("address vault", `${result}`);
 
-    // payload = {
-    //     function: `${ACCOUNT}::${MODULE}::get_total_value_lock`,
-    //     typeArguments: [],
-    //     functionArguments: [],
-    // };
-    // result = await aptos.view({ payload });
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::get_total_value_lock`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    result = await aptos.view({ payload });
 
-    // console.log("TVL vault", `${result}`);
+    console.log("TVL vault", `${result}`);
 
     payload = {
         function: `${ACCOUNT}::${MODULE}::get_total_staked`,
@@ -43,19 +43,36 @@ async function get_function() {
 
     console.log("staked vault", `${result}`);
 
-    //     payload = {
-    //     function: `${ACCOUNT}::${MODULE}::get_total_perpeptual`,
-    //     typeArguments: [],
-    //     functionArguments: [],
-    // };
-    // result = await aptos.view({ payload });
+        payload = {
+        function: `${ACCOUNT}::${MODULE}::get_total_perpeptual`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    result = await aptos.view({ payload });
 
-    // console.log("perp vault", `${result}`);
+    console.log("perp vault", `${result}`);
 
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::total_share`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    result = await aptos.view({ payload });
+
+    console.log("total share", `${result}`);
+
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::user_share`,
+        typeArguments: [],
+        functionArguments: [address_user],
+    };
+    result = await aptos.view({ payload });
+
+    console.log("user share", `${result}`);
 }
 
 async function get_total_share() {
-    let payload: ViewRequest;
+    let payload;
     payload = {
         function: `${ACCOUNT}::${MODULE}::total_share`,
         typeArguments: [],
@@ -69,7 +86,7 @@ async function get_total_share() {
 }
 
 async function get_balance() {
-    let payload: ViewRequest;
+    let payload;
     payload = {
         function: `${ACCOUNT}::${MODULE}::get_apt_balance`,
         typeArguments: [],
@@ -83,9 +100,21 @@ async function get_balance() {
 }
 
 async function get_balance_usdc() {
-    let payload: ViewRequest;
+    let payload;
     payload = {
         function: `${ACCOUNT}::${token}::get_usdc_balance`,
+        typeArguments: [],
+        functionArguments: ["0x018f8c33d241c6f4e9dc388b37960d36ff30ce5d7ea4a17d123857b5bb70277b"],
+    };
+    let result = await aptos.view({ payload });
+
+    console.log("address vault", `${result}`);
+}
+
+async function get_total_stake() {
+    let payload;
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::`,
         typeArguments: [],
         functionArguments: ["0xd5681ec72873e61d6b21fae75ab58d53a7935f42157a910e0343c72970e183cb"],
     };
@@ -94,12 +123,12 @@ async function get_balance_usdc() {
     console.log("address vault", `${result}`);
 }
 
-async function get_total_stake() {
-    let payload: ViewRequest;
+async function get_fund_fee() {
+    let payload;
     payload = {
         function: `${ACCOUNT}::${MODULE}::`,
         typeArguments: [],
-        functionArguments: ["0xd5681ec72873e61d6b21fae75ab58d53a7935f42157a910e0343c72970e183cb"],
+        functionArguments: [],
     };
     let result = await aptos.view({ payload });
 

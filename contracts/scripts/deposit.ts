@@ -7,7 +7,6 @@ import {
     HexInput,
     Network,
     NetworkToNetworkName,
-    ViewRequest
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
@@ -20,7 +19,7 @@ async function deposit() {
             sender: signer.accountAddress,
             data: {
                 function: `${ACCOUNT}::${MODULE}::deposit_safety_vault`,
-                functionArguments: [signer.accountAddress, 2_100_000, 6_808_405, 0, false],
+                functionArguments: [signer.accountAddress, 3_000_000, 6401120, 0, false],
             }
         }
     )
@@ -38,7 +37,7 @@ async function deposit2() {
             sender: signer.accountAddress,
             data: {
                 function: `${ACCOUNT}::${MODULE}::deposit_safety_vault`,
-                functionArguments: [signer.accountAddress, 2_000_000, 2_000_000, 1, false],
+                functionArguments: [signer.accountAddress, 900_000, 2_000_000, 1, false],
             }
         }
     )
