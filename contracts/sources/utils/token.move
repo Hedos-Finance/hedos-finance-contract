@@ -1,10 +1,32 @@
 module delta_hedging::token {
+    use delta_hedging::white_list::{only_admin};
     use aptos_framework::aptos_account::{transfer_fungible_assets};
     use aptos_framework::fungible_asset::{Metadata};
     use aptos_framework::object::{Self};
     use aptos_framework::primary_fungible_store;
 
     const USDC_ADDRESS: address = @USDC;
+    const DELTA_HEDGING: address = @delta_hedging;
+
+    struct BalanceUSD has key {
+        amount_balance: u64
+    }
+
+    public entry fun init_balance_usdc(
+        signer: &signer
+    ) {
+        only_admin(signer);
+        let new_balance = BalanceUSD {
+            amount_balance: 0
+        };
+
+        move_to(signer, new_balance);   
+    }
+
+    public fun update_balance(b: u64) acquires BalanceUSD {
+        let balance = borrow_global_mut<BalanceUSD>(DELTA_HEDGING);
+        balance.amount_balance = b
+    }
 
     public entry fun transfer_usdc(
         from: &signer,
@@ -18,14 +40,14 @@ module delta_hedging::token {
     #[view]
     public fun get_usdc_balance(account: address): u64{
         let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
-        // let balance = primary_fungible_store::balance<Metadata>(account, usdc);
-        // balance
-        if (!primary_fungible_store::is_frozen<Metadata>(account, usdc)) {
-            primary_fungible_store::balance<Metadata>(account, usdc)
-        } else {
-            0
-        }
+        let balance = primary_fungible_store::balance<Metadata>(account, usdc);
+        balance
     }
 
+    #[view]
+    public fun get_balance_usdc_before(): u64 acquires BalanceUSD {
+        let balance = borrow_global<BalanceUSD>(DELTA_HEDGING);
+        balance.amount_balance
+    }
     
 }

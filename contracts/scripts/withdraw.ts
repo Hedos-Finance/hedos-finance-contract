@@ -38,7 +38,7 @@ async function withdraw_safety() {
             sender: signer.accountAddress,
             data: {
                 function: `${ACCOUNT}::${MODULE}::withdraw_safety_with_fee`,
-                functionArguments: [signer.accountAddress, 2_000_000, 150, 200_000, 9401120, 0, false],
+                functionArguments: [signer.accountAddress, 2_000_000, 150, 200_000, 11112800, 0, false],
             }
         }
     )

@@ -1,5 +1,4 @@
 module delta_hedging::fund_fee {
-
     use delta_hedging::white_list::{only_admin};
     use delta_hedging::math256::{I256, init_i256, get_value_256, is_negative_256};
     const DELTA_HEDGING: address = @delta_hedging;
@@ -39,8 +38,6 @@ module delta_hedging::fund_fee {
     public fun set_fund_fee_zero() acquires FundFee{
         let fund_fee = borrow_global_mut<FundFee>(DELTA_HEDGING);
         fund_fee.fund_fee_all = init_i256(0, false);
-        fund_fee.fund_fee_safety = 0;
-        fund_fee.fund_fee_risky = init_i256(0, false);
     }
 
     public entry fun init_fund_fee(

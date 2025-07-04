@@ -10,7 +10,7 @@ import {
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
-const MODULE = "fund_fee";
+const MODULE = "token";
 
 async function init_fee() {
     const signer = await getSigner();
@@ -18,7 +18,7 @@ async function init_fee() {
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::init_fund_fee`,
+                function: `${ACCOUNT}::${MODULE}::init_balance_usdc`,
                 functionArguments: [],
             }
         }
