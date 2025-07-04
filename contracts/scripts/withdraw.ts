@@ -49,6 +49,24 @@ async function withdraw_safety() {
     console.log(executedTransaction);
 }
 
+async function withdraw_safety_user() {
+    const signer = await getSigner();
+    const transaction = await aptos.transaction.build.simple(
+        {
+            sender: signer.accountAddress,
+            data: {
+                function: `${ACCOUNT}::${MODULE}::withdraw_safety_vault`,
+                functionArguments: [signer.accountAddress, 2_000_000, 150, 100_000, 10970699,],
+            }
+        }
+    )
+
+    const committedTransaction = await aptos.signAndSubmitTransaction({ signer: signer, transaction });
+
+    const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
+    console.log(executedTransaction);
+}
+
 async function withdraw() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
@@ -69,6 +87,7 @@ async function withdraw() {
 async function main() {
     // await withdraw_risky();
     await withdraw_safety();
+    // await withdraw_safety_user();
     // await withdraw();
 }
 
