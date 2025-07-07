@@ -650,7 +650,8 @@ module delta_hedging::general_vault {
         vault.fund_fee_risky_rate_denominator = denominator;
     }
 
-    public entry fun set_fund_fee(_signer: &signer, value: u256, is_negative: bool) acquires Vault, VaultRef{
+    public entry fun set_fund_fee(signer: &signer, value: u256, is_negative: bool) acquires Vault, VaultRef{
+        only_admin(signer);
         let (fund_fee_all_before, fund_fee_safety_before, fund_fee_risky_before) = fund_fee_current();
         let fund_fee_all_after = init_i256(value, is_negative);
 

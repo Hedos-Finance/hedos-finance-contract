@@ -126,7 +126,7 @@ async function get_total_stake() {
 async function get_fund_fee() {
     let payload;
     payload = {
-        function: `${ACCOUNT}::${MODULE}::`,
+        function: `${ACCOUNT}::${MODULE}::fund_fee_ratio`,
         typeArguments: [],
         functionArguments: [],
     };
@@ -138,8 +138,9 @@ async function main() {
     // await get_balance();
     // await get_balance_usdc();
     // await get_total_stake();
-    await get_function();
+    // await get_function();
     // await get_total_share();
+    await get_fund_fee();
 }
 
 main();
