@@ -10,13 +10,14 @@
   "license": "ISC",
   "dependencies": {
     "@aptos-labs/ts-sdk": "^1.39.0",
+    "@hyperionxyz/sdk": "^0.0.16",
     "@merkletrade/ts-sdk": "1.0.3",
     "dotenv": "^16.5.0"
   },
   "devDependencies": {
+    "@merkletrade/ts-sdk": "1.0.3",
     "@types/node": "^22.15.21",
     "ts-node": "^10.9.2",
-    "@merkletrade/ts-sdk": "1.0.3",
     "typescript": "^5.8.3"
   }
 }
