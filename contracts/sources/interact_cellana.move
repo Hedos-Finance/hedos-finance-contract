@@ -34,7 +34,7 @@ module delta_hedging::interact_cellana {
     }
 
     #[view]
-    public fun get_amounts_out_APT_USDC_cellana(
+    public fun get_amounts_out_amAPT_USDC_cellana(
         amount_in: u64
     ): u64 {
         let amapt = object::address_to_object<Metadata>(AMAPT_ADDRESS);
@@ -43,6 +43,20 @@ module delta_hedging::interact_cellana {
             amapt,
             vector[APT_ADDRESS, USDC_ADDRESS],
             vector[true, false]
+        );
+        ans
+    }
+
+    #[view]
+    public fun get_amounts_out_APT_USDC_cellana(
+        amount_in: u64
+    ): u64 {
+        let apt = object::address_to_object<Metadata>(APT_ADDRESS);
+        let ans = cellana::router::get_amounts_out(
+            amount_in,
+            apt,
+            vector[USDC_ADDRESS],
+            vector[false]
         );
         ans
     }
