@@ -2,6 +2,7 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
     use std::signer;
 
     use aptos_std::table;
+    use aptos_std::vector;
 
     use aptos_framework::fungible_asset::Metadata;
     use aptos_framework::object::{Self};
@@ -11,6 +12,9 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
     use amnis::amapt_token::AmnisApt;
     use amnis::stapt_token::StakedApt;
     use amnis::stapt_token;
+
+    use dex_contract::router_v3;
+    use dex_contract::pool_v3;
     
     const PRECISION: u128 = 100000000;
 
@@ -20,6 +24,14 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
     const USDT_ADDRESS:     address = @fungible_USDT;
     const USDC_ADDRESS:     address = @fungible_USDC;
 
+    const APT_USDT_LP_ADR: address = @fungible_APT_USDT_LP;
+    const USDT_USDC_LP_ADR: address = @fungible_USDT_USDC_LP;
+    const AMAPT_APT_LP_ADR: address = @fungible_AMAPT_APT_LP;
+
+    const USDC_CHOOSEN: u8 = 1;
+    const APT_CHOOSEN: u8 = 2;
+    const AMAPT_CHOOSEN: u8 = 3;
+
     struct StakeCaculator has key, store {
         userStakes: table::Table<address, u64>,
     }
@@ -28,6 +40,13 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
         admin: address,
     }
     
+    struct SwapInformationInHyperion has key, store, drop {
+        adr: vector<address>,
+        coin_from: object::Object<Metadata>,
+        coin_to: object::Object<Metadata>,
+        slippage_type: u8,
+    }
+
     public entry fun init_stake_resources(
         account: &signer
     ) {
@@ -175,6 +194,135 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
                 table::remove(&mut stake_caculator.userStakes, user);
             };
         };
+    }
+
+    #[view]
+    public fun get_apt_usdc_price_hyperion(
+        amount: u64, 
+        slippage_type: u8
+    ): u128 {
+        let apt = object::address_to_object<Metadata>(APT_ADDRESS);
+        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+        let price = pool_v3::current_price(
+            apt,
+            usdc,
+            slippage_type
+        );
+
+        let ans = (amount as u128) / price;
+        ans
+    }
+
+    #[view]
+    public fun get_apt_usdc_price_hyperion_2(
+        amount: u64, 
+        slippage_type: u8
+    ): u64 {
+        let apt = object::address_to_object<Metadata>(APT_ADDRESS);
+        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+        let price = router_v3::get_batch_amount_out(
+            vector[APT_USDT_LP_ADR, USDT_USDC_LP_ADR],
+            amount,
+            apt,
+            usdc
+        );
+
+        price
+    }
+
+    public entry fun set_swap_information_in_hyperion(
+        owner_signer: &signer,
+        coin_from: u8,
+        coin_to: u8,
+        slippage_type: u8
+    ) acquires StakeAdmin, SwapInformationInHyperion {
+        assert!(signer::address_of(owner_signer) == get_admin_view(), 1);
+        let coins = vector::empty<address>();
+        let x;
+        let y;
+        if (coin_from == USDC_CHOOSEN) {
+            x = object::address_to_object<Metadata>(USDC_ADDRESS);
+            y = object::address_to_object<Metadata>(APT_ADDRESS);
+
+            coins.push_back(USDT_USDC_LP_ADR);
+            coins.push_back(APT_USDT_LP_ADR);
+
+            if (coin_to == AMAPT_CHOOSEN) {
+                y = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+
+                coins.push_back(AMAPT_APT_LP_ADR);
+            };
+        } else if (coin_from == APT_CHOOSEN) {
+            x = object::address_to_object<Metadata>(APT_ADDRESS);
+            
+            if(coin_to == USDC_CHOOSEN) {
+                y = object::address_to_object<Metadata>(USDC_ADDRESS);
+                coins.push_back(APT_USDT_LP_ADR);
+                coins.push_back(USDT_USDC_LP_ADR);
+            } else {
+                y = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+                coins.push_back(AMAPT_APT_LP_ADR);
+            };
+        } else {
+            x = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+            y = object::address_to_object<Metadata>(APT_ADDRESS);
+
+            coins.push_back(AMAPT_APT_LP_ADR);
+
+            if (coin_to == USDC_CHOOSEN) {
+                y = object::address_to_object<Metadata>(USDC_ADDRESS);
+                coins.push_back(APT_USDT_LP_ADR);
+                coins.push_back(USDT_USDC_LP_ADR);
+            };
+        };
+        let ans = SwapInformationInHyperion {
+            adr: coins,
+            coin_from: x,
+            coin_to: y,
+            slippage_type
+        };
+        // let construction_ref = &object::create_object(@hello_aptos_network);
+        // let sign = &object::generate_signer(construction_ref);
+        // let extend_ref = object::generate_extend_ref(construction_ref);
+        // let new_address = signer::address_of(sign);
+        let swap_info = borrow_global_mut<SwapInformationInHyperion>(signer::address_of(owner_signer));
+        if(!exists<SwapInformationInHyperion>(signer::address_of(owner_signer))) {
+            move_to(owner_signer, ans);
+        } else {
+            *swap_info = ans;
+        };
+    }
+
+    #[view]
+    public fun get_adr(): vector<address> acquires SwapInformationInHyperion {
+        let swap_info = borrow_global<SwapInformationInHyperion>(@hello_aptos_network);
+        swap_info.adr
+    }
+
+    #[view]
+    public fun get_coin_from(): object::Object<Metadata> acquires SwapInformationInHyperion {
+        let swap_info = borrow_global<SwapInformationInHyperion>(@hello_aptos_network);
+        swap_info.coin_from
+    }
+
+    #[view]
+    public fun get_coin_to(): object::Object<Metadata> acquires SwapInformationInHyperion {
+        let swap_info = borrow_global<SwapInformationInHyperion>(@hello_aptos_network);
+        swap_info.coin_to
+    }
+
+    //need to call set before call get
+    #[view]
+    public fun get_X_Y_price_hyperion(
+        amount: u64
+    ): u64 acquires SwapInformationInHyperion {
+        let price = router_v3::get_batch_amount_out(
+            get_adr(),
+            amount,
+            get_coin_from(),
+            get_coin_to()
+        );
+        price
     }
 }
 
