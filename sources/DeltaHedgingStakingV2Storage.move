@@ -281,10 +281,6 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
             coin_to: y,
             slippage_type
         };
-        // let construction_ref = &object::create_object(@hello_aptos_network);
-        // let sign = &object::generate_signer(construction_ref);
-        // let extend_ref = object::generate_extend_ref(construction_ref);
-        // let new_address = signer::address_of(sign);
         let swap_info = borrow_global_mut<SwapInformationInHyperion>(signer::address_of(owner_signer));
         if(!exists<SwapInformationInHyperion>(signer::address_of(owner_signer))) {
             move_to(owner_signer, ans);
