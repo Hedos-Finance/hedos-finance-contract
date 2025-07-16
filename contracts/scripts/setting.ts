@@ -6,20 +6,21 @@ import {
     Ed25519PrivateKey,
     HexInput,
     Network,
-    NetworkToNetworkName
+    NetworkToNetworkName,
+
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
 const MODULE = "general_vault";
-const admin = "0x1432adc04bde7645ce3ba9af2f7ecab30351d6c0fab0138b21377972a6261982";
-async function remain() {
+const account = "0x1432adc04bde7645ce3ba9af2f7ecab30351d6c0fab0138b21377972a6261982"
+async function setting() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::swap_amAPT_remain`,
-                functionArguments: [admin, 2_000_000],
+                function: `${ACCOUNT}::${MODULE}::set_total_share`,
+                functionArguments: ["120230493901924", "361196461675339"],
             }
         }
     )
@@ -30,14 +31,14 @@ async function remain() {
     console.log(executedTransaction);
 }
 
-async function withdraw() {
+async function setting_user() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::redeem_usdc`,
-                functionArguments: [admin, 1_000_000],
+                function: `${ACCOUNT}::${MODULE}::set_share_table_user`,
+                functionArguments: [account],
             }
         }
     )
@@ -47,10 +48,11 @@ async function withdraw() {
     const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
     console.log(executedTransaction);
 }
+
 
 async function main() {
-    // await remain();
-    await withdraw();
+    // await setting();
+    await setting_user();
 }
 
 main();

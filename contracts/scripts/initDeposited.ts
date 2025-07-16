@@ -10,16 +10,16 @@ import {
 } from "@aptos-labs/ts-sdk";
 
 const ACCOUNT = process.env.APTOS_ACCOUNT;
-const MODULE = "general_vault";
-const admin = "0x1432adc04bde7645ce3ba9af2f7ecab30351d6c0fab0138b21377972a6261982";
-async function remain() {
+const MODULE = "fund_fee";
+
+async function init_deposited() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::swap_amAPT_remain`,
-                functionArguments: [admin, 2_000_000],
+                function: `${ACCOUNT}::${MODULE}::init_total_deposited`,
+                functionArguments: [],
             }
         }
     )
@@ -30,14 +30,14 @@ async function remain() {
     console.log(executedTransaction);
 }
 
-async function withdraw() {
+async function set_current() {
     const signer = await getSigner();
     const transaction = await aptos.transaction.build.simple(
         {
             sender: signer.accountAddress,
             data: {
-                function: `${ACCOUNT}::${MODULE}::redeem_usdc`,
-                functionArguments: [admin, 1_000_000],
+                function: `${ACCOUNT}::${MODULE}::set_current`,
+                functionArguments: [360200000, 120200000 ],
             }
         }
     )
@@ -47,10 +47,23 @@ async function withdraw() {
     const executedTransaction = await aptos.waitForTransaction({ transactionHash: committedTransaction.hash });
     console.log(executedTransaction);
 }
+async function view_current() {
+    let payload;
+    payload = {
+        function: `${ACCOUNT}::${MODULE}::current_deposited`,
+        typeArguments: [],
+        functionArguments: [],
+    };
+    let result = await aptos.view({ payload });
 
+    console.log("", `${result}`);
+
+}
 async function main() {
-    // await remain();
-    await withdraw();
+    // await set_current();
+    await init_deposited();
+    // await view_current();
+
 }
 
 main();

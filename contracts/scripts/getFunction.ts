@@ -12,7 +12,7 @@ import {
 const ACCOUNT = process.env.APTOS_ACCOUNT;
 const MODULE = "general_vault";
 const token = "token";
-const address_user = "0b625e2c4582203073b54cded720782bd87b059ba98d8229177baf16b969c5d9";
+const address_user = "0x1432adc04bde7645ce3ba9af2f7ecab30351d6c0fab0138b21377972a6261982";
 async function get_function() {
     let payload;
     let result;
@@ -138,9 +138,9 @@ async function main() {
     // await get_balance();
     // await get_balance_usdc();
     // await get_total_stake();
-    // await get_function();
+    await get_function();
     // await get_total_share();
-    await get_fund_fee();
+    // await get_fund_fee();
 }
 
 main();
