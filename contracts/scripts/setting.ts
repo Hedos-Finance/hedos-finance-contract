@@ -51,8 +51,8 @@ async function setting_user() {
 
 
 async function main() {
-    // await setting();
-    await setting_user();
+    await setting();
+    // await setting_user();
 }
 
 main();

@@ -603,6 +603,7 @@ module delta_hedging::general_vault {
                 vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
                 vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
                 transfer_usdc(vault_signer, account, amount_remain_transfer);
+                update_current_deposited(0, amount_remain_transfer, false);
             };
 
             if( amountClose !=0 && amountUnstake !=0 ){
@@ -659,6 +660,7 @@ module delta_hedging::general_vault {
                 vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
                 vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
                 transfer_usdc(vault_signer, account, amount_remain_transfer);
+                update_current_deposited(0, amount_remain_transfer, false);
             };
 
             if( amountClose !=0 && amountUnstake !=0 )
