@@ -10,6 +10,7 @@ module hello_aptos_network::DeltaHedgingDeposit {
     use aptos_framework::aptos_coin::AptosCoin;
 
     use aries::controller;
+    use aries::profile;
 
     const NAME_BYTES: vector<u8> = x"4d61696e204163636f756e74";
 
@@ -58,5 +59,23 @@ module hello_aptos_network::DeltaHedgingDeposit {
             amount,
             false
         );
+    }
+
+    #[view]
+    public fun total_lending(): u64 {
+        let (total_collateral, total_apt_lending) = profile::profile_deposit<AptosCoin>(
+            @hello_aptos_network,
+            string::utf8(NAME_BYTES)
+        );
+        total_apt_lending
+    }
+
+    #[view]
+    public fun total_loaning()  : u128 {
+        let (total_collateral, total_apt_loaning) = profile::profile_loan<AptosCoin>(
+            @hello_aptos_network,
+            string::utf8(NAME_BYTES)
+        );
+        total_apt_loaning
     }
 }
