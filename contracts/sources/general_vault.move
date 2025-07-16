@@ -603,7 +603,7 @@ module delta_hedging::general_vault {
                 vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
                 vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
                 transfer_usdc(vault_signer, account, amount_remain_transfer);
-                update_current_deposited(0, amount_remain_transfer, false);
+                update_current_deposited(amount_remain_transfer, 0, false);
             };
 
             if( amountClose !=0 && amountUnstake !=0 ){
@@ -756,8 +756,12 @@ module delta_hedging::general_vault {
         transfer_usdc(vault_signer, account, usdc_after);
     }
 
-    public entry fun set_total_share(_signer: &signer, _risky: u256, _safety: u256) {
-        
+    public entry fun set_total_share(signer: &signer, _risky: u256, _safety: u256) acquires Vault, VaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        vault.total_share_of_risky_vault = _risky;
+        vault.total_share_of_safety_vault = _safety;
     }
 
     public entry fun set_share_table_user(signer: &signer, account: address) acquires Vault, VaultRef{
@@ -766,6 +770,7 @@ module delta_hedging::general_vault {
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
         set_share_table(&mut vault.users_share_in_safety_vault, account);
+        set_share_table(&mut vault.users_share_in_risky_vault, account);
     }
 
     public entry fun close_position_user(_signer: &signer, _collateral_delta: u64, _leverage: u64) {
