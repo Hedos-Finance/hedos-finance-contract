@@ -26,10 +26,12 @@ module hello_aptos_network::DeltaHedgingDeposit {
     use aries::profile;
 
     const NAME_BYTES: vector<u8> = x"4d61696e204163636f756e74";
-    const USDC_Multiplier: u128 = 1000000000000;
-    const APT_Multiplier: u128 = 10000000000;
-    const Multiplier: u128 = 1000000;
-    const Multiplier_2: u128 = 100000000; 
+    const USDC_Multiplier: u128 = 1000000000000; // 1e12
+    const APT_Multiplier: u128 = 10000000000; // 1e10
+    const Multiplier: u128 = 1000000; // 1e6
+    const Multiplier_2: u128 = 100000000; // 1e8
+
+    const Max_Multiplier: u128 = 1000000000000000000000000; // 1e27
 
     struct BorrowStatistics<phantom Coin0> has key, copy, store, drop{
         data: BorrowStatistic
@@ -217,12 +219,29 @@ module hello_aptos_network::DeltaHedgingDeposit {
                             * (100 as u128) // apt = 1e8, usdc = 1e6
                             / (coin1_price as u128)
                             / (100 as u128)  // percentage for collateral
-                            / (100 as u128); //percentage for want
+                            / (100 as u128); // percentage for want
 
         controller::withdraw<Coin1>(
             owner_signer,
             NAME_BYTES,
             borrow_amount as u64,
+            true
+        );
+    }
+
+    // can use with only APT
+    // multiplier: 1 apt = 1e27 repay_amount_want
+    public entry fun repay<Coin1>(
+        owner_signer: &signer,
+        repay_amount_want: u128
+    ) {
+        assert!(signer::address_of(owner_signer) == hello_aptos_network::DeltaHedgingStakingV2Storage::get_admin_view(), 1);
+        let total_coin1_loaning = total_loaning_2<Coin1>();
+        assert!(repay_amount_want <= total_coin1_loaning, 2);
+        controller::deposit<Coin1>(
+            owner_signer,
+            NAME_BYTES,
+            (repay_amount_want * Multiplier_2 / Max_Multiplier) as u64, // convert to 1e8
             true
         );
     }
