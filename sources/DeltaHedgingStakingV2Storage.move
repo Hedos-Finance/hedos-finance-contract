@@ -90,6 +90,11 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
     }
 
     #[view]
+    public fun get_coin_view<Coin0>(): u64 {
+        coin::balance<Coin0> (@hello_aptos_network)
+    }
+
+    #[view]
     public fun get_admin_view(): address acquires StakeAdmin {
         let storage = borrow_global<StakeAdmin>(@hello_aptos_network);
         storage.admin

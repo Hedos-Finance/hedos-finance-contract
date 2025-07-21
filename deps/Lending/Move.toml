@@ -1,0 +1,16 @@
+[package]
+name = "Lending"
+version = "1.0.0"
+published-at = "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba"
+
+[addresses]
+lending = "0xc6bc659f1649553c1a3fa05d9727433dc03843baac29473c817d06d39e7621ba"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
