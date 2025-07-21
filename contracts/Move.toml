@@ -1,24 +1,28 @@
 [package]
-name = "contracts"
-version = "2.0.0"
+name = "interact-third-party"
+version = "1.0.0"
 authors = []
 
 [addresses]
-fauz   = "0x3d4d0c5a1467ba82881e89b21bfabd85f38225ccbf27309ebdd6d61417923d64"
-merkle = "0x5ae6789dd2fec1a9ec9cccfb3acaf12e93d432f0a3a42c92fe1a9d490b7bbc06"
-amnis = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
-delta_hedging = "f2cde0a0b395d55a3474e37220bd37a80709e4bfe20478597dd38a016218f2f3"
-pancakeswap = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
-multi_router = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
-aptos_framework = "0x1"
-USDC = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
+fauz                    = "0xa0e7ff50d02f12c28a50538a1e9eb290801303cbea894b79a392fd78a862b71c"
+merkle                  = "0x5ae6789dd2fec1a9ec9cccfb3acaf12e93d432f0a3a42c92fe1a9d490b7bbc06"
+amnis                   = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
+delta_hedging           = "0xa0e7ff50d02f12c28a50538a1e9eb290801303cbea894b79a392fd78a862b71c"
+pancakeswap             = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
+multi_router            = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
+aptos_framework         = "0x1"
+USDC                    = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
+aries                   = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
+oracle                  = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
+decimal                 = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
+wrapped_coins           = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
 
-cellana             = "0x4bf51972879e3b95c4781a5cdcb9e1ee24ef483e7d22f2d903626f126df62bd1"
-fungible_AMAPT      = "0xe31e39d83acc719369ec42999e855ed3f178627ed8dd413b7d1669da385778e2"
-fungible_APT        = "0xedc2704f2cef417a06d1756a04a16a9fa6faaed13af469be9cdfcac5a21a8e2e"
-fungible_lzUSDT     = "0x981d5d65fe5718f5fa0a2696209286641c3a7a62088b6a9f361a8812cb7c2bf3"
-fungible_USDT       = "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
-fungible_USDC       = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
+cellana                 = "0x4bf51972879e3b95c4781a5cdcb9e1ee24ef483e7d22f2d903626f126df62bd1"
+fungible_AMAPT          = "0xe31e39d83acc719369ec42999e855ed3f178627ed8dd413b7d1669da385778e2"
+fungible_APT            = "0xedc2704f2cef417a06d1756a04a16a9fa6faaed13af469be9cdfcac5a21a8e2e"
+fungible_lzUSDT         = "0x981d5d65fe5718f5fa0a2696209286641c3a7a62088b6a9f361a8812cb7c2bf3"
+fungible_USDT           = "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
+fungible_USDC           = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
 
 [dev-addresses]
 
@@ -30,9 +34,13 @@ subdir = "aptos-framework"
 [dev-dependencies]
 
 [dependencies]
-merkle = { local = "../deps/merkle" }
-merkle-common = { local = "../deps/merkle-common" }
-amnis = {local = "../deps/amnis" }
-PancakeSwap = { local = "../deps/PancakeSwap" }
-MultiRouter = { local = "../deps/MultiRouter" }
-cellana = { local = "../deps/cellana" }
+merkle              = { local = "../deps/merkle" }
+merkle-common       = { local = "../deps/merkle-common" }
+amnis               = {local = "../deps/amnis" }
+PancakeSwap         = { local = "../deps/PancakeSwap" }
+MultiRouter         = { local = "../deps/MultiRouter" }
+cellana             = { local = "../deps/cellana" }
+Aries               = { local = "../deps/Aries" }
+Oracle              = { local = "../deps/Oracle" }
+Decimal             = { local = "../deps/Decimal" }
+WrappedCoins        = { local = "../deps/WrappedCoins" }

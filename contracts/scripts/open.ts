@@ -20,7 +20,7 @@ async function open_perp() {
             sender: signer.accountAddress,
             data: {
                 function: `${ACCOUNT}::${MODULE}::open_position`,
-                functionArguments: [2_000_000, 150],
+                functionArguments: [2_000_000, 150, false],
             }
         }
     )
