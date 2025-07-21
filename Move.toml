@@ -4,20 +4,28 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-hello_aptos_network = "0x0e69a8c2ee20552b88a9e7d9be52177ec168ededd6b5720f9c5b57ce825756c0"
-amnis               = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
-pancakeswap         = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
-aptos_framework     = "0x1"
-wrappedcoins        = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
-multi_router        = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
-liquidswap_v05      = "0x0163df34fccbf003ce219d3f1d9e70d140b60622cb9dd47599c25fb2f797ba6e"
+hello_aptos_network     = "0x0e69a8c2ee20552b88a9e7d9be52177ec168ededd6b5720f9c5b57ce825756c0"
+amnis                   = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
+pancakeswap             = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
+aptos_framework         = "0x1"
+wrapped_coins           = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
+multi_router            = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
+liquidswap_v05          = "0x0163df34fccbf003ce219d3f1d9e70d140b60622cb9dd47599c25fb2f797ba6e"
+dex_contract            = "0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c"
+aries                   = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
+oracle                  = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
+decimal                 = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
 
-cellana             = "0x4bf51972879e3b95c4781a5cdcb9e1ee24ef483e7d22f2d903626f126df62bd1"
-fungible_AMAPT      = "0xe31e39d83acc719369ec42999e855ed3f178627ed8dd413b7d1669da385778e2"
-fungible_APT        = "0xedc2704f2cef417a06d1756a04a16a9fa6faaed13af469be9cdfcac5a21a8e2e"
-fungible_lzUSDT     = "0x981d5d65fe5718f5fa0a2696209286641c3a7a62088b6a9f361a8812cb7c2bf3"
-fungible_USDT       = "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
-fungible_USDC       = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
+cellana                 = "0x4bf51972879e3b95c4781a5cdcb9e1ee24ef483e7d22f2d903626f126df62bd1"
+fungible_AMAPT          = "0xa259be733b6a759909f92815927fa213904df6540519568692caf0b068fe8e62"
+fungible_APT            = "0xa"
+fungible_lzUSDT         = "0x981d5d65fe5718f5fa0a2696209286641c3a7a62088b6a9f361a8812cb7c2bf3"
+fungible_USDT           = "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
+fungible_USDC           = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
+
+fungible_APT_USDT_LP    = "0x18269b1090d668fbbc01902fa6a5ac6e75565d61860ddae636ac89741c883cbc"
+fungible_USDT_USDC_LP   = "0xd3894aca06d5f42b27c89e6f448114b3ed6a1ba07f992a58b2126c71dd83c127"
+fungible_AMAPT_APT_LP   = "0xce131db3fb4f52c4a1526e2cf1d8a5383a6c5c0beaa610c277856a8721a9b5a3"
 
 [dev-addresses]
 
@@ -33,6 +41,11 @@ WrappedCoins        = { local = "../deps/WrappedCoins" }
 MultiRouter         = { local = "../deps/MultiRouter" }
 Liquidswapv05       = { local = "../deps/Liquidswapv05" }
 cellana             = { local = "../deps/cellana" }
+dex                 = { local = "../deps/dex" }
+Aries               = { local = "../deps/Aries" }
+Oracle              = { local = "../deps/Oracle" }
+Decimal             = { local = "../deps/Decimal" }
+                     
 [dependencies.Liquidswap]
 git = "https://github.com/pontem-network/liquidswap.git"
 rev = "main"
