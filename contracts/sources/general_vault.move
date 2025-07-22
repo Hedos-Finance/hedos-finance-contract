@@ -8,6 +8,7 @@ module delta_hedging::general_vault {
 
     use std::signer::{Self};
     use std::string::{String};
+    use std::vector;
     
     // use delta_hedging::math::{I64, init_i64, get_value, is_negative, sub, safe_sub};
     use delta_hedging::math::{safe_sub};
@@ -20,6 +21,7 @@ module delta_hedging::general_vault {
     use delta_hedging::interact_cellana::{swap_USDC_to_APT, swap_amAPT_to_USDC, get_amounts_out_USDC_APT_cellana, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
     use delta_hedging::fund_fee::{update_current_deposited};
     use delta_hedging::interact_aries::{Self};
+    use delta_hedging::third_party::{Self, ThirdParty};
 
     use amnis::amapt_token::AmnisApt;
     use amnis::stapt_token::StakedApt;
@@ -37,6 +39,14 @@ module delta_hedging::general_vault {
 
     fun get_pair(): string::String {
         string::utf8(b"APT_USD")
+    }
+
+    fun stringAPT(): string::String {
+        string::utf8(b"APT")
+    }
+
+    fun stringUSDC(): string::String {
+        string::utf8(b"USDC")
     }
 
     #[event]
@@ -118,22 +128,26 @@ module delta_hedging::general_vault {
 
     #[event]
     struct DepositLending has drop, store {
-        amount: u64
+        amount: u64,
+        token: String
     }
 
     #[event]
     struct BorrowLending has drop, store {
-        amount: u64
+        amount: u64,
+        token: String
     }
 
     #[event]
     struct RepayLending has drop, store {
-        amount: u64
+        amount: u64,
+        token: String
     }
 
     #[event]
     struct WithdrawLending has drop, store {
-        amount: u64
+        amount: u64,
+        token: String
     }
 
     #[view]
@@ -205,6 +219,20 @@ module delta_hedging::general_vault {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global<Vault>(vault_ref.vault_address);
         vault.total_perpeptual
+    }
+
+    #[view]
+    public fun get_total_leding(): u64 acquires VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_address = vault_ref.vault_address;
+        interact_aries::total_lending<WrappedUSDC>(vault_address)
+    }
+
+    #[view]
+    public fun get_total_loaning(): u64 acquires VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_address = vault_ref.vault_address;
+        interact_aries::total_loaning<AptosCoin>(vault_address) as u64
     }
 
     #[view]
@@ -360,12 +388,12 @@ module delta_hedging::general_vault {
         });
     }
 
-    public entry fun open_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, _market_skew: bool) acquires Vault, VaultRef {
+    public entry fun open_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires Vault, VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
         let pair = get_pair();
-        simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, true, _market_skew, pair);
+        simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, true, market_skew, pair);
 
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
         vault.total_perpeptual += collateral_delta;
@@ -376,13 +404,13 @@ module delta_hedging::general_vault {
         });
     }
 
-    public entry fun close_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, _market_skew: bool) acquires Vault, VaultRef {
+    public entry fun close_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires Vault, VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
         let pair = get_pair();
         
-        simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, false, _market_skew, pair);
+        simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, false, market_skew, pair);
 
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
         vault.total_perpeptual = safe_sub(vault.total_perpeptual, collateral_delta);
@@ -456,15 +484,22 @@ module delta_hedging::general_vault {
         })
     }
 
-    public entry fun lending_deposit(_signer: &signer, amountUSDC: u64) acquires VaultRef {
+    public entry fun lending_deposit(_signer: &signer, amount: u64, token: String) acquires VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
 
-        interact_aries::deposit_fa<WrappedUSDC>(vault_signer, amountUSDC);
+        if (token == string::utf8(b"USDC")) {
+            interact_aries::deposit_fa<WrappedUSDC>(vault_signer, amount);
+        } else if (token == string::utf8(b"APT")) {
+            interact_aries::deposit<AptosCoin>(vault_signer, amount, false);
+        } else {
+            abort 1;
+        };
 
         emit(DepositLending {
-            amount: amountUSDC
+            amount: amount,
+            token: token
         });
     }
 
@@ -476,7 +511,8 @@ module delta_hedging::general_vault {
         interact_aries::withdraw<AptosCoin>(vault_signer, amountAPT, true);
 
         emit(BorrowLending {
-            amount: amountAPT
+            amount: amountAPT,
+            token: stringAPT()
         });
     }
 
@@ -489,10 +525,32 @@ module delta_hedging::general_vault {
         interact_aries::withdraw<AptosCoin>(vault_signer, amountAPT_borrow, true);
 
         emit(DepositLending {
-            amount: amountUSDC
+            amount: amountUSDC,
+            token: stringUSDC()
         });
         emit(BorrowLending {
-            amount: amountAPT_borrow
+            amount: amountAPT_borrow,
+            token: stringAPT()
+        });
+    }
+
+    public entry fun lending_deposit_and_borrow_by_rate(_signer: &signer, amountUSDC: u64, rate: u64) acquires VaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        let (_, amountAPT_borrow) = interact_aries::deposit_and_borrow<WrappedUSDC, AptosCoin>(vault_signer, amountUSDC, rate);
+
+        interact_aries::deposit_fa<WrappedUSDC>(vault_signer, amountUSDC);
+        interact_aries::withdraw<AptosCoin>(vault_signer, amountAPT_borrow, true);
+
+        emit(DepositLending {
+            amount: amountUSDC,
+            token: stringUSDC()
+        });
+        emit(BorrowLending {
+            amount: amountAPT_borrow,
+            token: stringAPT()
         });
     }
 
@@ -504,19 +562,27 @@ module delta_hedging::general_vault {
         interact_aries::repay<AptosCoin>(vault_signer, amountAPT as u128);
 
         emit(RepayLending {
-            amount: amountAPT
+            amount: amountAPT,
+            token: stringAPT()
         });
     }
 
-    public entry fun lending_withdraw(_signer: &signer, amountUSDC: u64) acquires VaultRef {
+    public entry fun lending_withdraw(_signer: &signer, amount: u64, token: String) acquires VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
 
-        interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amountUSDC, false);
+        if (token == string::utf8(b"USDC")) {
+            interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amount, false);
+        } else if (token == string::utf8(b"APT")) {
+            interact_aries::withdraw<AptosCoin>(vault_signer, amount, false);
+        } else {
+            abort 1;
+        };
 
         emit(WithdrawLending {
-            amount: amountUSDC
+            amount: amount,
+            token: token
         });
     }
 
@@ -529,16 +595,200 @@ module delta_hedging::general_vault {
         interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amountUSDC_withdraw, false);
 
         emit(RepayLending {
-            amount: amountAPT_repay
+            amount: amountAPT_repay,
+            token: stringAPT()
         });
         emit(WithdrawLending {
-            amount: amountUSDC_withdraw
+            amount: amountUSDC_withdraw,
+            token: stringUSDC()
         });
     }
+
+    public entry fun lending_repay_and_withdraw_all(_signer: &signer) acquires VaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        let amountAPT_repay = interact_aries::total_loaning<AptosCoin>(vault_ref.vault_address);
+        interact_aries::repay<AptosCoin>(vault_signer, amountAPT_repay);
+
+        let amountUSDC_withdraw = interact_aries::total_lending<WrappedUSDC>(vault_ref.vault_address);
+        interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amountUSDC_withdraw, false);
+
+        emit(RepayLending {
+            amount: amountAPT_repay as u64,
+            token: stringAPT()
+        });
+        emit(WithdrawLending {
+            amount: amountUSDC_withdraw,
+            token: stringUSDC()
+        });
+    }
+
+    public entry fun withdraw_safety(_signer: &signer, account:address, amount:u64, amountClose: u64, _leverage: u64, _amountUnstake:u64, total_value: u64 ) acquires Vault, VaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        let amount_withdraw = amount;
+        let total_share = vault.total_share_of_safety_vault;
+        let user_share = total_share * (amount_withdraw as u256) / (total_value as u256);
+
+        update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
+        update_current_deposited(amount_withdraw, 0, false);
+
+        vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
+        vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
+        vault.total_perpeptual = safe_sub(vault.total_perpeptual, amountClose);
+
+        transfer_usdc(vault_signer, account, amount_withdraw);
+
+
+        emit(Withdrawn {
+            account,
+            amount: amount_withdraw,
+            is_risky: false,
+        });
+    }
+
+    public entry fun withdraw_risky(_signer: &signer, account:address, amount:u64, amountClose: u64, _leverage: u64, _amountUnstake:u64, total_value: u64 ) acquires Vault, VaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        let amount_withdraw = amount;
+        let total_share = vault.total_share_of_risky_vault;
+        let user_share = total_share * (amount_withdraw as u256) / (total_value as u256);
+
+        update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
+        update_current_deposited(0, amount_withdraw, false);
+
+        vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
+        vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
+        vault.total_perpeptual = safe_sub(vault.total_perpeptual, amountClose);
+
+        transfer_usdc(vault_signer, account, amount_withdraw);
+
+        emit(Withdrawn {
+            account,
+            amount: amount_withdraw,
+            is_risky: true,
+        });
+    }
+
+    public entry fun withdraw_safety_user_v1(_signer: &signer, account:address, amount:u64, amountClose: u64, leverage: u64, market_skew: bool, amountUnstake:u64, total_value: u64, close_all: bool ) acquires Vault, VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        if (!close_all) {
+            let amount_remain_transfer;
+            if( usdc_balance > amount && amountClose == 0 && amountUnstake == 0 )
+                amount_remain_transfer = amount
+            else amount_remain_transfer = usdc_balance;
+
+            if( amount_remain_transfer != 0 )
+            {   
+                let total_share = vault.total_share_of_safety_vault;
+                let user_share = (total_share * (amount_remain_transfer as u256)) / (total_value as u256);
+
+                update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
+
+                vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
+                vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
+                transfer_usdc(vault_signer, account, amount_remain_transfer);
+                update_current_deposited(amount_remain_transfer, 0, false);
+            };
+
+            if( amountClose !=0 && amountUnstake !=0 ){
+                withdraw_safety_vault_v1(_signer, account, amountClose, leverage, market_skew, amountUnstake);
+            };
+
+            emit(Withdrawn {
+                account,
+                amount: amount_remain_transfer + amountClose + amountUnstake,
+                is_risky: false,
+            });
+        }
+        else {
+            let pair = get_pair();
+            simple_trade_v2(vault_signer, vault_ref.vault_address, amountClose, leverage, false, false, market_skew, pair);
+        
+            let amApt_unstake = get_amounts_out_USDC_amAPT_cellana(amountUnstake);
+            let st_unstake = (PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128) ) as u64;
+
+            let amAPT_balance_before = get_amAPT_balance(vault_ref.vault_address);
+            unstake_amAPT(vault_signer, st_unstake, vault_ref.vault_address);
+            let amAPT_balance_after = get_amAPT_balance(vault_ref.vault_address);
+
+            swap_amAPT_to_USDC(vault_signer, amAPT_balance_after - amAPT_balance_before);
+            
+            emit(Withdrawn {
+                account,
+                amount: amount,
+                is_risky: false,
+            });
+        }
+    }
+
+    public entry fun withdraw_risky_user_v1(_signer: &signer, account:address, amount:u64, amountClose: u64, leverage: u64, market_skew: bool, amountUnstake:u64, total_value: u64, close_all: bool ) acquires Vault, VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        if (!close_all) {          
+            let amount_remain_transfer;
+            if( usdc_balance > amount && amountClose == 0 && amountUnstake == 0 )
+                amount_remain_transfer = amount
+            else amount_remain_transfer = usdc_balance;
+            
+            if( amount_remain_transfer != 0 )
+            {   
+                let total_share = vault.total_share_of_risky_vault;
+                let user_share = (total_share * (amount_remain_transfer as u256)) / (total_value as u256);
+
+                update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
+
+                vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
+                vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
+                transfer_usdc(vault_signer, account, amount_remain_transfer);
+                update_current_deposited(0, amount_remain_transfer, false);
+            };
+
+            if( amountClose !=0 && amountUnstake !=0 )
+                withdraw_risky_vault_v1(_signer, account, amountClose, leverage, market_skew, amountUnstake);
+
+            emit(Withdrawn {
+                account,
+                amount: amount_remain_transfer + amountClose + amountUnstake,
+                is_risky: true,
+            });
+        } else {
+            let pair = get_pair();
+            simple_trade_v2(vault_signer, vault_ref.vault_address, amountClose, leverage, false, false, market_skew, pair);
+        
+            let amApt_unstake = get_amounts_out_USDC_amAPT_cellana(amountUnstake);
+            let st_unstake = (PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128) ) as u64;
+
+            let amAPT_balance_before = get_amAPT_balance(vault_ref.vault_address);
+            unstake_amAPT(vault_signer, st_unstake, vault_ref.vault_address);
+            let amAPT_balance_after = get_amAPT_balance(vault_ref.vault_address);
+
+            swap_amAPT_to_USDC(vault_signer, amAPT_balance_after - amAPT_balance_before);
+            
+            emit(Withdrawn {
+                account,
+                amount: amount,
+                is_risky: true,
+            });
+        }
+    }   
     
-
-
-    public entry fun withdraw_risky_vault(_signer: &signer, account: address, amountClose: u64, leverage: u64, _market_skew: bool, amountUnstake:u64, _total_value: u64) acquires VaultRef{
+    public entry fun withdraw_risky_vault_v1(_signer: &signer, account: address, amountClose: u64, leverage: u64, market_skew: bool, amountUnstake:u64) acquires VaultRef{
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
 
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
@@ -546,7 +796,7 @@ module delta_hedging::general_vault {
 
         let usdc_before = get_usdc_balance(vault_ref.vault_address);
         update_balance(usdc_before);
-        simple_trade_v2(vault_signer, vault_ref.vault_address, amountClose, leverage, false, false, _market_skew, pair);
+        simple_trade_v2(vault_signer, vault_ref.vault_address, amountClose, leverage, false, false, market_skew, pair);
 
         let amApt_unstake = get_amounts_out_USDC_amAPT_cellana(amountUnstake);
         let st_unstake = (PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128) ) as u64;
@@ -564,7 +814,7 @@ module delta_hedging::general_vault {
         });
     }
 
-    public entry fun withdraw_safety_vault(_signer: &signer, account: address, amountClose: u64, leverage: u64, _market_skew: bool, amountUnstake:u64, _total_value: u64) acquires VaultRef{
+    public entry fun withdraw_safety_vault_v1(_signer: &signer, account: address, amountClose: u64, leverage: u64, market_skew: bool, amountUnstake:u64) acquires VaultRef{
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
 
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
@@ -572,7 +822,7 @@ module delta_hedging::general_vault {
 
         let usdc_before = get_usdc_balance(vault_ref.vault_address);
         update_balance(usdc_before);
-        simple_trade_v2(vault_signer, vault_ref.vault_address, amountClose, leverage, false, false, _market_skew, pair);
+        simple_trade_v2(vault_signer, vault_ref.vault_address, amountClose, leverage, false, false, market_skew, pair);
 
         let amApt_unstake = get_amounts_out_USDC_amAPT_cellana(amountUnstake);
         let st_unstake = (PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128) ) as u64;
@@ -587,6 +837,180 @@ module delta_hedging::general_vault {
             account,
             amount: amountClose + amountUnstake,
             is_risky: false,
+        });
+    }    
+
+    fun withdraw_liquid(vault_signer: &signer, amountUnstake: u64, vault_address: address) {
+        let amApt_unstake = get_amounts_out_USDC_amAPT_cellana(amountUnstake);
+        let st_unstake = (PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128) ) as u64;
+
+        let amAPT_balance_before = get_amAPT_balance(vault_address);
+        unstake_amAPT(vault_signer, st_unstake, vault_address);
+        let amAPT_balance_after = get_amAPT_balance(vault_address);
+
+        swap_amAPT_to_USDC(vault_signer, amAPT_balance_after - amAPT_balance_before);
+    }
+
+    fun withdraw_vault_internal(vault_signer: &signer, vault_address: address, actions: vector<ThirdParty>): u64 {
+        let amount = 0;
+        let i = 0;
+        let len = vector::length(&actions);
+        while (i < len) {
+            let action = vector::borrow(&actions, i);
+            let type = third_party::get_type_id(action);
+            if (type == third_party::perp_id()) {
+                let (amount_close, leverage, is_long, market_skew) = third_party::get_perp_param(action);
+                simple_trade_v2(vault_signer, vault_address, amount_close, leverage, is_long, false, market_skew, get_pair());
+                amount += amount_close;
+            } else if (type == third_party::liquid_id()) {
+                let amountUnstake = third_party::get_liquid_param(action);
+                withdraw_liquid(vault_signer, amountUnstake, vault_address);
+                amount += amountUnstake;
+            } else if (type == third_party::lending_id()) {
+                let (amount_withdraw, token_withdraw, amount_repay, _token_repay, action) = third_party::get_lending_param(action);
+                amount += amount_withdraw;
+                if (action == third_party::only_withdraw_id()) {
+                    if (token_withdraw == string::utf8(b"USDC")) {
+                        interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amount_withdraw, false);
+                    } else if (token_withdraw == string::utf8(b"APT")) {
+                        interact_aries::withdraw<AptosCoin>(vault_signer, amount_withdraw, false);
+                    } else {
+                        abort 1;
+                    };
+                } else if (action == third_party::repay_withdraw_id()) {
+                    interact_aries::repay<AptosCoin>(vault_signer, amount_repay as u128);       
+                    interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amount_withdraw, false);
+                } else {
+                    abort 1;
+                };
+            };
+            i += 1;
+        };
+
+        amount
+    }
+
+    public entry fun withdraw_safety_vault_v2(
+        _signer: &signer, 
+        account: address,
+        data: vector<u64>
+    ) acquires VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        let actions = third_party::unzip_input(data);
+        let amount = withdraw_vault_internal(vault_signer, vault_address, actions);
+        
+        emit(Withdrawn {
+            account,
+            amount,
+            is_risky: false,
+        });
+    }
+
+    public entry fun withdraw_risky_vault_v2(
+        _signer: &signer, 
+        account: address,
+        data: vector<u64>
+    ) acquires VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        let actions = third_party::unzip_input(data);
+        let amount = withdraw_vault_internal(vault_signer, vault_address, actions);
+        
+        emit(Withdrawn {
+            account,
+            amount,
+            is_risky: true,
+        });
+    }
+
+    public entry fun withdraw_safety_user_v2(
+        _signer: &signer, 
+        account: address,
+        amount: u64,
+        total_value:  u64,
+        close_all: bool,
+        data: vector<u64>
+    ) acquires Vault, VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        if (!close_all) {          
+            let amount_remain_transfer;
+            if( usdc_balance > amount && vector::length(&data) == 0)
+                amount_remain_transfer = amount
+            else amount_remain_transfer = usdc_balance;
+            
+            if( amount_remain_transfer != 0 )
+            {   
+                let total_share = vault.total_share_of_safety_vault;
+                let user_share = (total_share * (amount_remain_transfer as u256)) / (total_value as u256);
+
+                update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
+
+                vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
+                vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
+                transfer_usdc(vault_signer, account, amount_remain_transfer);
+                update_current_deposited(0, amount_remain_transfer, false);
+            };
+        };
+        
+        if( vector::length(&data) != 0)
+            withdraw_safety_vault_v2(_signer, account, data);
+
+        emit(Withdrawn {
+            account,
+            amount: amount,
+            is_risky: false,
+        });
+    }
+
+    public entry fun withdraw_risky_user_v2(
+        _signer: &signer, 
+        account: address,
+        amount: u64,
+        total_value:  u64,
+        close_all: bool,
+        data: vector<u64>
+    ) acquires Vault, VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        if (!close_all) {          
+            let amount_remain_transfer;
+            if( usdc_balance > amount && vector::length(&data) == 0)
+                amount_remain_transfer = amount
+            else amount_remain_transfer = usdc_balance;
+            
+            if( amount_remain_transfer != 0 )
+            {   
+                let total_share = vault.total_share_of_risky_vault;
+                let user_share = (total_share * (amount_remain_transfer as u256)) / (total_value as u256);
+
+                update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
+
+                vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
+                vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
+                transfer_usdc(vault_signer, account, amount_remain_transfer);
+                update_current_deposited(0, amount_remain_transfer, false);
+            };
+        };
+        
+        if( vector::length(&data) != 0)
+            withdraw_risky_vault_v2(_signer, account, data);
+
+        emit(Withdrawn {
+            account,
+            amount: amount,
+            is_risky: true,
         });
     }
 
@@ -680,174 +1104,10 @@ module delta_hedging::general_vault {
     public entry fun redeem_usdc(signer: &signer, account:address, _amount:u64) acquires VaultRef {
         only_admin(signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
-        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        let _usdc_balance = get_usdc_balance(vault_ref.vault_address);
 
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
         transfer_usdc(vault_signer, account, _amount);  
-    }
-
-    public entry fun withdraw_safety_user(_signer: &signer, account:address, amount:u64, amountClose: u64, leverage: u64, _market_skew: bool, amountUnstake:u64, total_value: u64, close_all: bool ) acquires Vault, VaultRef {
-        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
-        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
-        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
-        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
-
-        if (!close_all) {
-            let amount_remain_transfer;
-            if( usdc_balance > amount && amountClose == 0 && amountUnstake == 0 )
-                amount_remain_transfer = amount
-            else amount_remain_transfer = usdc_balance;
-
-            if( amount_remain_transfer != 0 )
-            {   
-                let total_share = vault.total_share_of_safety_vault;
-                let user_share = (total_share * (amount_remain_transfer as u256)) / (total_value as u256);
-
-                update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
-
-                vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
-                vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
-                transfer_usdc(vault_signer, account, amount_remain_transfer);
-                update_current_deposited(amount_remain_transfer, 0, false);
-            };
-
-            if( amountClose !=0 && amountUnstake !=0 ){
-                withdraw_safety_vault(_signer, account, amountClose, leverage, _market_skew, amountUnstake, total_value);
-            };
-
-            emit(Withdrawn {
-                account,
-                amount: amount_remain_transfer + amountClose + amountUnstake,
-                is_risky: false,
-            });
-        }
-        else {
-            let pair = get_pair();
-            simple_trade_v2(vault_signer, vault_ref.vault_address, amountClose, leverage, false, false, _market_skew, pair);
-        
-            let amApt_unstake = get_amounts_out_USDC_amAPT_cellana(amountUnstake);
-            let st_unstake = (PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128) ) as u64;
-
-            let amAPT_balance_before = get_amAPT_balance(vault_ref.vault_address);
-            unstake_amAPT(vault_signer, st_unstake, vault_ref.vault_address);
-            let amAPT_balance_after = get_amAPT_balance(vault_ref.vault_address);
-
-            swap_amAPT_to_USDC(vault_signer, amAPT_balance_after - amAPT_balance_before);
-            
-            emit(Withdrawn {
-                account,
-                amount: amount,
-                is_risky: false,
-            });
-        }
-
-    }
-
-    public entry fun withdraw_risky_user(_signer: &signer, account:address, amount:u64, amountClose: u64, leverage: u64, _market_skew: bool, amountUnstake:u64, total_value: u64, close_all: bool ) acquires Vault, VaultRef {
-        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
-        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
-        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
-        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
-
-        if (!close_all) {          
-            let amount_remain_transfer;
-            if( usdc_balance > amount && amountClose == 0 && amountUnstake == 0 )
-                amount_remain_transfer = amount
-            else amount_remain_transfer = usdc_balance;
-            
-            if( amount_remain_transfer != 0 )
-            {   
-                let total_share = vault.total_share_of_risky_vault;
-                let user_share = (total_share * (amount_remain_transfer as u256)) / (total_value as u256);
-
-                update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
-
-                vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
-                vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
-                transfer_usdc(vault_signer, account, amount_remain_transfer);
-                update_current_deposited(0, amount_remain_transfer, false);
-            };
-
-            if( amountClose !=0 && amountUnstake !=0 )
-                withdraw_risky_vault(_signer, account, amountClose, leverage, _market_skew, amountUnstake, total_value);
-
-            emit(Withdrawn {
-                account,
-                amount: amount_remain_transfer + amountClose + amountUnstake,
-                is_risky: true,
-            });
-        } else {
-            let pair = get_pair();
-            simple_trade_v2(vault_signer, vault_ref.vault_address, amountClose, leverage, false, false, _market_skew, pair);
-        
-            let amApt_unstake = get_amounts_out_USDC_amAPT_cellana(amountUnstake);
-            let st_unstake = (PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128) ) as u64;
-
-            let amAPT_balance_before = get_amAPT_balance(vault_ref.vault_address);
-            unstake_amAPT(vault_signer, st_unstake, vault_ref.vault_address);
-            let amAPT_balance_after = get_amAPT_balance(vault_ref.vault_address);
-
-            swap_amAPT_to_USDC(vault_signer, amAPT_balance_after - amAPT_balance_before);
-            
-            emit(Withdrawn {
-                account,
-                amount: amount,
-                is_risky: true,
-            });
-        }
-    }
-
-    public entry fun withdraw_safety(_signer: &signer, account:address, amount:u64, amountClose: u64, _leverage: u64, _amountUnstake:u64, total_value: u64 ) acquires Vault, VaultRef {
-        only_admin(_signer);
-        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
-        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
-        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
-
-        let amount_withdraw = amount;
-        let total_share = vault.total_share_of_safety_vault;
-        let user_share = total_share * (amount_withdraw as u256) / (total_value as u256);
-
-        update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
-        update_current_deposited(amount_withdraw, 0, false);
-
-        vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
-        vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
-        vault.total_perpeptual = safe_sub(vault.total_perpeptual, amountClose);
-
-        transfer_usdc(vault_signer, account, amount_withdraw);
-
-
-        emit(Withdrawn {
-            account,
-            amount: amount_withdraw,
-            is_risky: false,
-        });
-    }
-
-    public entry fun withdraw_risky(_signer: &signer, account:address, amount:u64, amountClose: u64, _leverage: u64, _amountUnstake:u64, total_value: u64 ) acquires Vault, VaultRef {
-        only_admin(_signer);
-        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
-        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
-        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
-
-        let amount_withdraw = amount;
-        let total_share = vault.total_share_of_risky_vault;
-        let user_share = total_share * (amount_withdraw as u256) / (total_value as u256);
-
-        update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
-        update_current_deposited(0, amount_withdraw, false);
-
-        vault.total_value_lock = safe_sub(vault.total_value_lock, amount_withdraw);
-        vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
-        vault.total_perpeptual = safe_sub(vault.total_perpeptual, amountClose);
-
-        transfer_usdc(vault_signer, account, amount_withdraw);
-
-        emit(Withdrawn {
-            account,
-            amount: amount_withdraw,
-            is_risky: true,
-        });
     }
 
     public entry fun swap_amAPT_remain(_signer: &signer, account:address, _amount:u64) acquires VaultRef {

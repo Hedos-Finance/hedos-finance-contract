@@ -81,17 +81,7 @@ module delta_hedging::interact_merkle_trade {
         _open: bool,
         _pair: String,
     ): (u64, u64) {
-        if (_pair == utf8(b"APT_USD")) {
-            let _size_delta = (_collateral_delta * 25 / 28) * _leverage;
-            if (_open) {
-              (_size_delta, _collateral_delta)
-            } else {
-                (_size_delta, (_collateral_delta * 25 / 28))
-            }
-        } else {
-            abort 1;
-            (0, 0)
-        }
+        (0, 0)
     }
 
     public entry fun simple_trade(
@@ -103,40 +93,6 @@ module delta_hedging::interact_merkle_trade {
         _open: bool,
         _pair: String,
     ) {
-        let taker = true;
-        if (_is_long == _open) {
-            taker = false;
-        };
-        let (size_delta, collateral_delta) = get_size_delta_and_collateral_delta(_collateral_delta, _leverage, taker, _pair);
-        if (!_is_long) {
-            if (_open) {
-                if (_pair == utf8(b"APT_USD")) {
-                    open_short_order<APT_USD, W_USDC>(_signer, _user_address, size_delta, _collateral_delta);
-                } else {
-                    abort 1;
-                }
-            } else {
-                if (_pair == utf8(b"APT_USD")) {
-                    close_short_order<APT_USD, W_USDC>(_signer, _user_address, size_delta, collateral_delta);
-                } else {
-                    abort 1;
-                }
-            }
-        } else {
-            if (_open) {
-                if (_pair == utf8(b"APT_USD")) {
-                    open_long_order<APT_USD, W_USDC>(_signer, _user_address, size_delta, _collateral_delta);
-                } else {
-                    abort 1;
-                }
-            } else {
-                if (_pair == utf8(b"APT_USD")) {
-                    close_long_order<APT_USD, W_USDC>(_signer, _user_address, size_delta, collateral_delta);
-                } else {
-                    abort 1;
-                }
-            }
-        }
     }
     
     public entry fun open_short_order<PairType, CollateralType> (

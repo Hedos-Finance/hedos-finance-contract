@@ -1,13 +1,13 @@
 [package]
-name = "interact-third-party"
-version = "1.0.0"
+name = "contracts"
+version = "2.0.0"
 authors = []
 
 [addresses]
-fauz                    = "0xa0e7ff50d02f12c28a50538a1e9eb290801303cbea894b79a392fd78a862b71c"
+fauz                    = "f2cde0a0b395d55a3474e37220bd37a80709e4bfe20478597dd38a016218f2f3"
 merkle                  = "0x5ae6789dd2fec1a9ec9cccfb3acaf12e93d432f0a3a42c92fe1a9d490b7bbc06"
 amnis                   = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
-delta_hedging           = "0xa0e7ff50d02f12c28a50538a1e9eb290801303cbea894b79a392fd78a862b71c"
+delta_hedging           = "f2cde0a0b395d55a3474e37220bd37a80709e4bfe20478597dd38a016218f2f3"
 pancakeswap             = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
 multi_router            = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
 aptos_framework         = "0x1"

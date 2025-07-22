@@ -20,9 +20,9 @@ module delta_hedging::interact_aries {
     }
 
     struct BorrowStatistic has key, store, drop, copy {
-        Collateral_Factor: u8, 
-        Liquidation_Ratio: u8,
-        Borrow_Factor: u8
+        Collateral_Factor: u64,
+        Liquidation_Ratio: u64,
+        Borrow_Factor: u64
     }
     
     #[view]
@@ -80,9 +80,9 @@ module delta_hedging::interact_aries {
 
     public entry fun set_borrow_statistics<Coin0>(
         owner_signer: &signer,
-        collateral_factor: u8,
-        liquidation_ratio: u8,
-        borrow_factor: u8
+        collateral_factor: u64,
+        liquidation_ratio: u64,
+        borrow_factor: u64
     ) acquires BorrowStatistics {
         let owner = signer::address_of(owner_signer);
     
@@ -161,29 +161,21 @@ module delta_hedging::interact_aries {
     }
 
     // can use with only pair <USDC/APT>
-    public entry fun deposit_and_borrow<Coin0, Coin1>(
-        owner_signer: &signer,
+    public fun deposit_and_borrow<Coin0, Coin1>(
+        _owner_signer: &signer,
         input_amount: u64,
-        collateral_want: u8
-    ) acquires BorrowStatistics {
+        collateral_want: u64
+    ): (u64, u64) acquires BorrowStatistics {
         assert!(collateral_want <= get_borrow_statistic<Coin1>().Collateral_Factor, 3);
 
         let coin0_price = get_price<Coin0>();
         let coin1_price = get_price<Coin1>() * 100;
-        
-        let margin_amount_in_USD = (input_amount as u128) 
-                                * (coin0_price as u128) 
-                                * (get_borrow_statistic<Coin0>().Collateral_Factor as u128) 
-                                / USDC_Multiplier
-                                / Multiplier
-                                / 100;
-        assert!(margin_amount_in_USD >= 5, 4);
-        
-        controller::deposit_fa<Coin0>(
-            owner_signer,
-            NAME_BYTES,
-            input_amount
-        );
+                                
+        // controller::deposit_fa<Coin0>(
+        //     owner_signer,
+        //     NAME_BYTES,
+        //     input_amount
+        // );
 
         let borrow_amount = (input_amount as u128) 
                             * (coin0_price as u128) 
@@ -192,14 +184,16 @@ module delta_hedging::interact_aries {
                             * (100 as u128) // apt = 1e8, usdc = 1e6
                             / (coin1_price as u128)
                             / (100 as u128)  // percentage for collateral
-                            / (100 as u128); //percentage for want
+                            / (1000000 as u128); //percentage for want
 
-        controller::withdraw<Coin1>(
-            owner_signer,
-            NAME_BYTES,
-            borrow_amount as u64,
-            true
-        );
+        // controller::withdraw<Coin1>(
+        //     owner_signer,
+        //     NAME_BYTES,
+        //     borrow_amount as u64,
+        //     true
+        // );
+
+        (input_amount, borrow_amount as u64)
     }
 
     // cai true/false trong truong hop deposit la option co/khong gui tai san lam collateral
