@@ -24,6 +24,12 @@ module delta_hedging::interact_aries {
         Liquidation_Ratio: u64,
         Borrow_Factor: u64
     }
+
+    public entry fun register_user(
+        account: &signer
+    ) {
+        controller::register_user(account, NAME_BYTES);
+    }
     
     #[view]
     public fun get_price<Coin0>(): u128 {

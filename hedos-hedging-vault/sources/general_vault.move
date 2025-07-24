@@ -18,7 +18,7 @@ module delta_hedging::general_vault {
     use delta_hedging::token::{transfer_usdc, get_usdc_balance, update_balance};
     use delta_hedging::interact_merkle_trade::{simple_trade_v2};
     use delta_hedging::interact_amnis::{stake, unstake_amAPT, price_stAPT};
-    use delta_hedging::interact_cellana::{swap_USDC_to_APT, swap_amAPT_to_USDC, get_amounts_out_USDC_APT_cellana, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
+    use delta_hedging::interact_cellana::{swap_USDC_to_APT, swap_APT_to_USDC, swap_amAPT_to_USDC, get_amounts_out_USDC_APT_cellana, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
     use delta_hedging::fund_fee::{update_current_deposited};
     use delta_hedging::interact_aries::{Self};
     use delta_hedging::third_party::{Self, ThirdParty};
@@ -318,6 +318,17 @@ module delta_hedging::general_vault {
         emit(CreateNewVault {
             new_vault_address: new_vault_address
         });
+    }
+
+    public entry fun register_aries_vault(signer: &signer) acquires VaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        interact_aries::register_user(vault_signer);
+    }
+
+    public fun register_aries() {
     }
 
     fun update_share_table(share_table: &mut Table<address, u256>, account: address, delta_share: u256, increase: bool) {
@@ -623,6 +634,22 @@ module delta_hedging::general_vault {
             amount: amountUSDC_withdraw,
             token: stringUSDC()
         });
+    }
+
+    public entry fun cellana_swap_APT_to_USDC(_signer: &signer, amountAPT: u64) acquires VaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        swap_APT_to_USDC(vault_signer, amountAPT);
+    }
+
+    public entry fun cellana_swap_USDC_to_APT(_signer: &signer, amountUSDC: u64) acquires VaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        swap_USDC_to_APT(vault_signer, amountUSDC);
     }
 
     public entry fun withdraw_safety(_signer: &signer, account:address, amount:u64, amountClose: u64, _leverage: u64, _amountUnstake:u64, total_value: u64 ) acquires Vault, VaultRef {

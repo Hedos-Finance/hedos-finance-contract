@@ -1,4 +1,12 @@
 module aries::controller {
+    
+    public entry fun register_user(
+        account: &signer,
+        default_profile_name: vector<u8>
+    ) {
+        abort(0);
+    }
+
     public entry fun deposit<Coin0>(
         account: &signer,
         profile_name: vector<u8>,

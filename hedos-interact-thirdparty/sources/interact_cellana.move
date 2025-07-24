@@ -103,6 +103,21 @@ module delta_hedging::interact_cellana {
         ans
     }
 
+    public entry fun swap_APT_to_USDC(signer: &signer, amount_in: u64) {
+        assert!(amount_in > 0, 0);
+
+        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+        let amount_out_min = get_amounts_out_APT_USDC_cellana(amount_in);
+        router::swap_route_entry_from_coin<AptosCoin>(
+            signer,
+            amount_in,
+            amount_out_min,
+            vector[usdc],
+            vector[false],
+            signer::address_of(signer)
+        );
+    }
+
     public entry fun swap_USDC_to_APT(signer: &signer, amount_in: u64) {
         assert!(amount_in > 0, 0);
 
