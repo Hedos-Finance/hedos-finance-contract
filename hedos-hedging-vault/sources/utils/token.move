@@ -1,9 +1,10 @@
 module delta_hedging::token {
     use delta_hedging::white_list::{only_admin};
-    use aptos_framework::aptos_account::{transfer_fungible_assets};
+    use aptos_framework::aptos_account::{transfer_fungible_assets, transfer_coins};
     use aptos_framework::fungible_asset::{Metadata};
     use aptos_framework::object::{Self};
     use aptos_framework::primary_fungible_store;
+    use aptos_framework::aptos_coin::AptosCoin;
 
     const USDC_ADDRESS: address = @USDC;
     const DELTA_HEDGING: address = @delta_hedging;
@@ -35,6 +36,14 @@ module delta_hedging::token {
     ) {
         let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
         transfer_fungible_assets(from, usdc, to, amount);
+    }
+
+    public entry fun transfer_apt(
+        from: &signer,
+        to: address,
+        amount: u64,
+    ) {
+        transfer_coins<AptosCoin>(from, to, amount);
     }
 
     #[view]

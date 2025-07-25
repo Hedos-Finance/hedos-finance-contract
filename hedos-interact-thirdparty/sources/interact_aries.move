@@ -171,33 +171,32 @@ module delta_hedging::interact_aries {
         _owner_signer: &signer,
         input_amount: u64,
         collateral_want: u64
-    ): (u64, u64) acquires BorrowStatistics {
-        assert!(collateral_want <= get_borrow_statistic<Coin1>().Collateral_Factor, 3);
+    ): (u64, u64) {
 
         let coin0_price = get_price<Coin0>();
         let coin1_price = get_price<Coin1>() * 100;
-                                
-        // controller::deposit_fa<Coin0>(
-        //     owner_signer,
-        //     NAME_BYTES,
-        //     input_amount
-        // );
 
         let borrow_amount = (input_amount as u128) 
                             * (coin0_price as u128) 
                             * (collateral_want as u128) 
-                            * (get_borrow_statistic<Coin0>().Collateral_Factor as u128)
-                            * (100 as u128) // apt = 1e8, usdc = 1e6
-                            / (coin1_price as u128)
-                            / (100 as u128)  // percentage for collateral
-                            / (1000000 as u128); //percentage for want
+                            / (coin1_price as u128);
 
-        // controller::withdraw<Coin1>(
-        //     owner_signer,
-        //     NAME_BYTES,
-        //     borrow_amount as u64,
-        //     true
-        // );
+        (input_amount, borrow_amount as u64)
+    }
+
+    #[view]
+    public fun get_borrow_amount<Coin0, Coin1>(
+        input_amount: u64,
+        collateral_want: u64
+    ): (u64, u64) {
+
+        let coin0_price = get_price<Coin0>();
+        let coin1_price = get_price<Coin1>() * 100;
+
+        let borrow_amount = (input_amount as u128) 
+                            * (coin0_price as u128) 
+                            * (collateral_want as u128) 
+                            / (coin1_price as u128);
 
         (input_amount, borrow_amount as u64)
     }

@@ -9,22 +9,6 @@ module delta_hedging::third_party {
         amount_repay: u64, token_repay: String,
         action: u8,
     }
-
-    #[view]
-    public fun new_perp_action(
-        collateral_delta: u64, 
-        leverage: u64, 
-        is_long: bool, 
-        market_skew: bool,
-    ): ThirdParty {
-        ThirdParty {
-            type: perp_id(),
-            collateral_delta, leverage, is_long, market_skew, pair: empty_string(),
-            amount_withdraw: 0, token_withdraw: empty_string(),
-            amount_repay: 0, token_repay: empty_string(),
-            action: 0
-        }
-    }
     
     #[view]
     public fun new_perp(
@@ -43,12 +27,58 @@ module delta_hedging::third_party {
     }
 
     #[view]
+    public fun new_perp_v2(
+        collateral_delta: u64, 
+        leverage: u64, 
+        is_long: bool, 
+        market_skew: bool,
+        is_open: bool,
+        is_official: bool,
+    ): vector<u64> {
+        let vec: vector<u64> = vector[];
+        vector::push_back(&mut vec, perp_id() as u64);
+        vector::push_back(&mut vec, collateral_delta);
+        vector::push_back(&mut vec, leverage);
+        vector::push_back(&mut vec, if (is_long) 1 else 0);
+        vector::push_back(&mut vec, if (market_skew) 1 else 0);
+        let action = 0;
+        if (is_open) {
+            action ^= (1 << 1);
+        };
+        if (is_official) {
+            action ^= (1 << 0);
+        };
+        vector::push_back(&mut vec, action as u64);
+        vec
+    }
+
+    #[view]
     public fun new_liquid(
         amount_withdraw: u64,
     ): vector<u64> {
         let vec: vector<u64> = vector[];
         vector::push_back(&mut vec, liquid_id() as u64);
         vector::push_back(&mut vec, amount_withdraw);
+        vec
+    }
+
+    #[view]
+    public fun new_liquid_v2(
+        amount: u64,
+        is_open: bool,
+        is_official: bool,
+    ): vector<u64> {
+        let vec: vector<u64> = vector[];
+        vector::push_back(&mut vec, liquid_id() as u64);
+        vector::push_back(&mut vec, amount);
+        let action = 0;
+        if (is_open) {
+            action ^= (1 << 1);
+        };  
+        if (is_official) {
+            action ^= (1 << 0);
+        };
+        vector::push_back(&mut vec, action as u64);
         vec
     }
 
@@ -70,6 +100,33 @@ module delta_hedging::third_party {
         vec
     }
 
+    #[view]
+    public fun new_lending_v2(
+        amount_withdraw: u64,
+        token_withdraw: String,
+        amount_repay: u64, 
+        token_repay: String,
+        action: u8,
+        is_open: bool,
+        is_official: bool,
+    ): vector<u64> {
+        let vec: vector<u64> = vector[];
+        vector::push_back(&mut vec, lending_id() as u64);
+        vector::push_back(&mut vec, amount_withdraw);
+        vector::push_back(&mut vec, get_token_id(token_withdraw));
+        vector::push_back(&mut vec, amount_repay);
+        vector::push_back(&mut vec, get_token_id(token_repay));
+        action = action << 2;
+        if (is_open) {
+            action ^= (1 << 1);
+        };
+        if (is_official) {
+            action ^= (1 << 0);
+        };
+        vector::push_back(&mut vec, action as u64);
+        vec
+    }
+
     public fun unzip_input(data: vector <u64>): vector<ThirdParty> {
         let i = 0;
         let len = vector::length(&data);
@@ -81,16 +138,18 @@ module delta_hedging::third_party {
                 let leverage = *vector::borrow(&data, i + 2);
                 let is_long = *vector::borrow(&data, i + 3) != 0;
                 let market_skew = *vector::borrow(&data, i + 4) != 0;
-                let tp = new_perp_action(
-                    collateral_delta, leverage, is_long, market_skew
+                let action = *vector::borrow(&data, i + 5) as u8;
+                let tp = new_perp_action_v2(
+                    collateral_delta, leverage, is_long, market_skew, action
                 );
                 vector::push_back(&mut result, tp);
-                i += 5;
+                i += 6;
             } else if (type_id == liquid_id()) {
                 let amount_withdraw = *vector::borrow(&data, i + 1);
-                let tp = new_liquid_action(amount_withdraw);
+                let action = *vector::borrow(&data, i + 2) as u8;
+                let tp = new_liquid_action_v2(amount_withdraw, action);
                 vector::push_back(&mut result, tp);
-                i += 2;
+                i += 3;
             } else if (type_id == lending_id()) {
                 let amount_withdraw = *vector::borrow(&data, i + 1);
                 let token_withdraw = get_token_string(*vector::borrow(&data, i + 2));
@@ -142,9 +201,39 @@ module delta_hedging::third_party {
             abort 1
         }
     }
-
+    
+    public fun new_perp_action(
+        collateral_delta: u64, 
+        leverage: u64, 
+        is_long: bool, 
+        market_skew: bool,
+    ): ThirdParty {
+        ThirdParty {
+            type: perp_id(),
+            collateral_delta, leverage, is_long, market_skew, pair: empty_string(),
+            amount_withdraw: 0, token_withdraw: empty_string(),
+            amount_repay: 0, token_repay: empty_string(),
+            action: 0
+        }
+    }
 
     #[view]
+    public fun new_perp_action_v2(
+        collateral_delta: u64, 
+        leverage: u64, 
+        is_long: bool, 
+        market_skew: bool,
+        action: u8,
+    ): ThirdParty {
+        ThirdParty {
+            type: perp_id(),
+            collateral_delta, leverage, is_long, market_skew, pair: empty_string(),
+            amount_withdraw: 0, token_withdraw: empty_string(),
+            amount_repay: 0, token_repay: empty_string(),
+            action
+        }
+    }
+
     public fun new_liquid_action(
         amount_withdraw: u64, 
     ): ThirdParty {
@@ -154,6 +243,20 @@ module delta_hedging::third_party {
             amount_withdraw, token_withdraw: empty_string(),
             amount_repay: 0, token_repay: empty_string(),
             action: 0
+        }
+    }
+
+    #[view]
+    public fun new_liquid_action_v2(
+        amount_withdraw: u64, 
+        action: u8,
+    ): ThirdParty {
+        ThirdParty {
+            type: liquid_id(),
+            collateral_delta: 0, leverage: 0, is_long: false, market_skew: false, pair: empty_string(),
+            amount_withdraw, token_withdraw: empty_string(),
+            amount_repay: 0, token_repay: empty_string(),
+            action
         }
     }
 
@@ -178,6 +281,16 @@ module delta_hedging::third_party {
         tp.type
     }
 
+    public fun get_is_open(tp: &ThirdParty): bool {
+        assert!(tp.type == perp_id() || tp.type == liquid_id() || tp.type == lending_id(), 0);
+        ((tp.action >> 1) & 1) == 1
+    }
+
+    public fun get_is_official(tp: &ThirdParty): bool {
+        assert!(tp.type == perp_id() || tp.type == liquid_id() || tp.type == lending_id(), 0);
+        (tp.action & 1) == 1
+    }
+
     public fun get_action_id(tp: &ThirdParty): u8 {
         tp.action
     }
@@ -194,7 +307,7 @@ module delta_hedging::third_party {
 
     public fun get_lending_param(tp: &ThirdParty): (u64, String, u64, String, u8) {
         assert!(tp.type == lending_id(), 0);
-        (tp.amount_withdraw, tp.token_withdraw, tp.amount_repay, tp.token_repay, tp.action)
+        (tp.amount_withdraw, tp.token_withdraw, tp.amount_repay, tp.token_repay, tp.action >> 2)
     }
 
     fun empty_string(): string::String {

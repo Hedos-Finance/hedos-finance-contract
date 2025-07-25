@@ -20,22 +20,26 @@ async function test() {
     console.log("Signer:", signer);
 
     const perpPayload: InputViewFunctionData  = {
-        function: `${ACCOUNT}::${MODULE}::new_perp`,
+        function: `${ACCOUNT}::${MODULE}::new_perp_v2`,
         typeArguments: [],
         functionArguments: [
             "2000000",      // collateral_delta: u64
             "150",          // leverage: u64
             true,           // is_long: bool
-            false           // market_skew: bool
+            false,          // market_skew: bool
+            false,          // is_open: bool
+			      true            // is_official: bool
         ],
     };
     const perp = await aptos.view({payload: perpPayload});
 
     const liquidPayload: InputViewFunctionData  = {
-        function: `${ACCOUNT}::${MODULE}::new_liquid`,
+        function: `${ACCOUNT}::${MODULE}::new_liquid_v2`,
         typeArguments: [],
         functionArguments: [
-            "1000000"        // amount_withdraw: u64
+            "1000000",        // amount_withdraw: u64         
+            false,          // is_open: bool
+			      true            // is_official: bool
         ],
     };
     const liquid = await aptos.view({payload: liquidPayload});
@@ -44,14 +48,17 @@ async function test() {
     const APT = 'APT';
 
     const lendingPayload: InputViewFunctionData  = {
-        function: `${ACCOUNT}::${MODULE}::new_lending`,
+        function: `${ACCOUNT}::${MODULE}::new_lending_v2`,
         typeArguments: [],
         functionArguments: [
             "1000000",      // amount_withdraw: u64
             USDC,         // token_withdraw: String
             "1000000",      // amount_repay: u64
             APT,          // token_repay: String
-            "1"               // action: u8
+            "1",               // action: u8:             
+            false,          // is_open: bool
+			      true            // is_official: bool
+            
         ],
     };
     const lending = await aptos.view({payload: lendingPayload});
@@ -61,7 +68,7 @@ async function test() {
     console.log("liquid:", liquid);
     console.log("lending:", lending);
 
-    let merged = JSON.stringify([...perp, ...lending, ...liquid].flat());
+    let merged = JSON.stringify([...lending, ...lending, ...liquid].flat());
     console.log(merged);
 
     const checkPayload: InputViewFunctionData  = {

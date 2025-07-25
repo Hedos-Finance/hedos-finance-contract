@@ -14,8 +14,8 @@ module delta_hedging::general_vault {
     use delta_hedging::math::{safe_sub};
     use delta_hedging::math256::{I256, init_i256, get_value_256, is_negative_256, sub_256, safe_sub_u256};
 
-    use delta_hedging::white_list::{only_admin};
-    use delta_hedging::token::{transfer_usdc, get_usdc_balance, update_balance};
+    use delta_hedging::white_list::{only_admin, add_admin};
+    use delta_hedging::token::{transfer_usdc, transfer_apt, get_usdc_balance, update_balance};
     use delta_hedging::interact_merkle_trade::{simple_trade_v2};
     use delta_hedging::interact_amnis::{stake, unstake_amAPT, price_stAPT};
     use delta_hedging::interact_cellana::{swap_USDC_to_APT, swap_APT_to_USDC, swap_amAPT_to_USDC, get_amounts_out_USDC_APT_cellana, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
@@ -74,9 +74,23 @@ module delta_hedging::general_vault {
         fund_fee_risky_rate_denominator: u64, 
     }
 
+    struct BackupVault has key {
+        total_value_lock: u64,
+    }
+
     struct VaultRef has key {
         vault_address: address,
         vault_extend_ref: ExtendRef,
+    }
+
+    struct BackupVaultRef has key {
+        vault_address: address,
+        vault_extend_ref: ExtendRef,
+    }
+
+    struct AdminRef has key {
+        admin_address: address,
+        admin_extend_ref: ExtendRef,
     }
 
     #[event]
@@ -320,12 +334,89 @@ module delta_hedging::general_vault {
         });
     }
 
+    public entry fun init_backup_vault(signer: &signer) acquires BackupVaultRef {
+        only_admin(signer);
+        let constructor_ref = &object::create_object(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer(constructor_ref);
+        let extend_ref = object::generate_extend_ref(constructor_ref);
+        let new_vault_address = signer::address_of(vault_signer);
+
+        let new_vault = BackupVault {
+            total_value_lock: 0,
+        };
+
+        move_to(vault_signer, new_vault);   
+
+        if (!exists<BackupVaultRef>(DELTA_HEDGING)) {
+            move_to(signer, BackupVaultRef {
+                vault_address: new_vault_address,
+                vault_extend_ref: extend_ref,
+            })
+        } else {
+            let vault_ref = borrow_global_mut<BackupVaultRef>(DELTA_HEDGING);
+            vault_ref.vault_address = new_vault_address;
+            vault_ref.vault_extend_ref = extend_ref;
+        };
+    }
+
+    public entry fun init_admin_ref(signer: &signer) acquires AdminRef {
+        only_admin(signer);
+        let constructor_ref = &object::create_object(DELTA_HEDGING);
+        let admin_signer = &object::generate_signer(constructor_ref);
+        let extend_ref = object::generate_extend_ref(constructor_ref);
+        let new_admin_address = signer::address_of(admin_signer);
+
+        add_admin(signer, new_admin_address);
+
+        if (!exists<AdminRef>(DELTA_HEDGING)) {
+            move_to(admin_signer, AdminRef {
+                admin_address: new_admin_address,
+                admin_extend_ref: extend_ref,
+            })
+        } else {
+            let admin_ref = borrow_global_mut<AdminRef>(DELTA_HEDGING);
+            admin_ref.admin_address = new_admin_address;
+            admin_ref.admin_extend_ref = extend_ref;
+        };
+
+    }
+
     public entry fun register_aries_vault(signer: &signer) acquires VaultRef {
         only_admin(signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
 
         interact_aries::register_user(vault_signer);
+    }
+
+    public entry fun register_aries_backup_vault(signer: &signer) acquires BackupVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        interact_aries::register_user(vault_signer);
+    }
+
+    public entry fun transfer_internal_vault(signer: &signer, amount: u64, official_to_backup: bool, token: String) acquires VaultRef, BackupVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+
+        let from = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let to = backup_vault_ref.vault_address;
+
+        if (!official_to_backup) {
+            from = &object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref);
+            to = vault_ref.vault_address;
+        };
+
+        if (token == string::utf8(b"USDC")) {
+            transfer_usdc(from, to, amount);
+        } else if (token == string::utf8(b"APT")) {
+            transfer_apt(from, to, amount);
+        } else {
+            abort 1;
+        };
     }
 
     public fun register_aries() {
@@ -415,6 +506,23 @@ module delta_hedging::general_vault {
         });
     }
 
+    public entry fun open_position_backup(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let pair = get_pair();
+        simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, true, market_skew, pair);
+    }
+
+    public entry fun open_position_v2(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool, is_official: bool) acquires Vault, VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            open_position(_signer, collateral_delta, leverage, is_long, market_skew);
+        } else {
+            open_position_backup(_signer, collateral_delta, leverage, is_long, market_skew);
+        };
+    }
+
     public entry fun close_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires Vault, VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
@@ -430,6 +538,24 @@ module delta_hedging::general_vault {
             leverage,
             pair
         });
+    }
+
+    public entry fun close_position_backup(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let pair = get_pair();
+        
+        simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, false, market_skew, pair);
+    }
+
+    public entry fun close_position_v2(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool, is_official: bool) acquires Vault, VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            close_position(_signer, collateral_delta, leverage, is_long, market_skew);
+        } else {
+            close_position_backup(_signer, collateral_delta, leverage, is_long, market_skew);
+        };
     }
 
     public entry fun liquid_staking(_signer: &signer, amountUSDC: u64) acquires VaultRef {
@@ -448,6 +574,33 @@ module delta_hedging::general_vault {
         emit(Stake {
             amount: amountAPTMin
         })
+    }
+
+    public entry fun liquid_staking_backup(_signer: &signer, amountUSDC: u64) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let amountAPTMin = get_amounts_out_USDC_APT_cellana(amountUSDC);
+
+        let amount_stake_before = get_apt_balance(vault_ref.vault_address);
+        swap_USDC_to_APT(vault_signer, amountUSDC);
+        let amount_stake_after = get_apt_balance(vault_ref.vault_address) ;
+        let amount_stake = amount_stake_after - amount_stake_before;
+
+        stake(vault_signer, amount_stake, vault_ref.vault_address);
+        
+        emit(Stake {
+            amount: amountAPTMin
+        })
+    }
+
+    public entry fun liquid_staking_v2(_signer: &signer, amountUSDC: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            liquid_staking(_signer, amountUSDC);
+        } else {
+            liquid_staking_backup(_signer, amountUSDC);
+        };
     }
 
     public entry fun liquid_staking_unstake_all(_signer: &signer) acquires VaultRef {
@@ -469,6 +622,36 @@ module delta_hedging::general_vault {
         emit(UnStake {
             amount: amount_unstake
         })
+    }
+
+    public entry fun liquid_staking_unstake_all_backup(_signer: &signer) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let usdc_before = get_usdc_balance(vault_ref.vault_address);
+    
+        let stAPT_balance = get_stAPT_balance(vault_ref.vault_address);
+        unstake_amAPT(vault_signer, stAPT_balance, vault_ref.vault_address);
+        
+        let amAPT_balance = get_amAPT_balance(vault_ref.vault_address);
+        
+        swap_amAPT_to_USDC(vault_signer, amAPT_balance);
+        let usdc_after = get_usdc_balance(vault_ref.vault_address);
+
+        let amount_unstake = usdc_after - usdc_before;
+       
+        emit(UnStake {
+            amount: amount_unstake
+        })
+    }
+
+    public entry fun liquid_staking_unstake_all_v2(_signer: &signer, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            liquid_staking_unstake_all(_signer);
+        } else {
+            liquid_staking_unstake_all_backup(_signer);
+        };
     }
 
     public entry fun liquid_staking_unstake(_signer: &signer, amountUSDC: u64) acquires VaultRef {
@@ -495,6 +678,39 @@ module delta_hedging::general_vault {
         })
     }
 
+    public entry fun liquid_staking_unstake_backup(_signer: &signer, amountUSDC: u64) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let usdc_before = get_usdc_balance(vault_ref.vault_address);
+
+        let amApt_unstake = get_amounts_out_USDC_amAPT_cellana(amountUSDC);
+        
+        let st_unstake = (PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128) ) as u64;
+
+        let amAPT_balance_before = get_amAPT_balance(vault_ref.vault_address);
+        unstake_amAPT(vault_signer, st_unstake, vault_ref.vault_address);
+        let amAPT_balance_after = get_amAPT_balance(vault_ref.vault_address);
+
+        swap_amAPT_to_USDC(vault_signer, amAPT_balance_after - amAPT_balance_before);
+        let usdc_after = get_usdc_balance(vault_ref.vault_address);
+
+        let amount_unstake = usdc_after - usdc_before;
+        
+        emit(UnStake {
+            amount: amount_unstake
+        })
+    }
+
+    public entry fun liquid_staking_unstake_v2(_signer: &signer, amountUSDC: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            liquid_staking_unstake(_signer, amountUSDC);
+        } else {
+            liquid_staking_unstake_backup(_signer, amountUSDC);
+        };
+    }
+
     public entry fun lending_deposit(_signer: &signer, amount: u64, token: String) acquires VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
@@ -514,6 +730,34 @@ module delta_hedging::general_vault {
         });
     }
 
+    public entry fun lending_deposit_backup(_signer: &signer, amount: u64, token: String) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        if (token == string::utf8(b"USDC")) {
+            interact_aries::deposit_fa<WrappedUSDC>(vault_signer, amount);
+        } else if (token == string::utf8(b"APT")) {
+            interact_aries::deposit<AptosCoin>(vault_signer, amount, false);
+        } else {
+            abort 1;
+        };
+
+        emit(DepositLending {
+            amount: amount,
+            token: token
+        });
+    }
+
+    public entry fun lending_deposit_v2(_signer: &signer, amount: u64, token: String, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            lending_deposit(_signer, amount, token);
+        } else {
+            lending_deposit_backup(_signer, amount, token);
+        };
+    }
+
     public entry fun lending_borrow(_signer: &signer, amountAPT: u64) acquires VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
@@ -525,6 +769,28 @@ module delta_hedging::general_vault {
             amount: amountAPT,
             token: stringAPT()
         });
+    }
+
+    public entry fun lending_borrow_backup(_signer: &signer, amountAPT: u64) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        interact_aries::withdraw<AptosCoin>(vault_signer, amountAPT, true);
+
+        emit(BorrowLending {
+            amount: amountAPT,
+            token: stringAPT()
+        });
+    }
+
+    public entry fun lending_borrow_v2(_signer: &signer, amountAPT: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            lending_borrow(_signer, amountAPT);
+        } else {
+            lending_borrow_backup(_signer, amountAPT);
+        };
     }
 
     public entry fun lending_deposit_and_borrow(_signer: &signer, amountUSDC: u64, amountAPT_borrow: u64) acquires VaultRef {
@@ -543,6 +809,33 @@ module delta_hedging::general_vault {
             amount: amountAPT_borrow,
             token: stringAPT()
         });
+    }
+
+    public entry fun lending_deposit_and_borrow_backup(_signer: &signer, amountUSDC: u64, amountAPT_borrow: u64) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        interact_aries::deposit_fa<WrappedUSDC>(vault_signer, amountUSDC);
+        interact_aries::withdraw<AptosCoin>(vault_signer, amountAPT_borrow, true);
+
+        emit(DepositLending {
+            amount: amountUSDC,
+            token: stringUSDC()
+        });
+        emit(BorrowLending {
+            amount: amountAPT_borrow,
+            token: stringAPT()
+        });
+    }
+
+    public entry fun lending_deposit_and_borrow_v2(_signer: &signer, amountUSDC: u64, amountAPT_borrow: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            lending_deposit_and_borrow(_signer, amountUSDC, amountAPT_borrow);
+        } else {
+            lending_deposit_and_borrow_backup(_signer, amountUSDC, amountAPT_borrow);
+        };
     }
 
     public entry fun lending_deposit_and_borrow_by_rate(_signer: &signer, amountUSDC: u64, rate: u64) acquires VaultRef {
@@ -565,6 +858,16 @@ module delta_hedging::general_vault {
         });
     }
 
+    #[view]
+    public fun max_apt_borrow(amountUSDC: u64): u64 acquires VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        let (_, amountAPT_borrow) = interact_aries::deposit_and_borrow<WrappedUSDC, AptosCoin>(vault_signer, amountUSDC, 80);
+
+        amountAPT_borrow
+    }
+
     public entry fun lending_repay(_signer: &signer, amountAPT: u64) acquires VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
@@ -576,6 +879,28 @@ module delta_hedging::general_vault {
             amount: amountAPT,
             token: stringAPT()
         });
+    }
+
+    public entry fun lending_repay_backup(_signer: &signer, amountAPT: u64) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        interact_aries::repay<AptosCoin>(vault_signer, amountAPT as u128);
+
+        emit(RepayLending {
+            amount: amountAPT,
+            token: stringAPT()
+        });
+    }
+
+    public entry fun lending_repay_v2(_signer: &signer, amountAPT: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            lending_repay(_signer, amountAPT);
+        } else {
+            lending_repay_backup(_signer, amountAPT);
+        };
     }
 
     public entry fun lending_withdraw(_signer: &signer, amount: u64, token: String) acquires VaultRef {
@@ -597,6 +922,34 @@ module delta_hedging::general_vault {
         });
     }
 
+    public entry fun lending_withdraw_backup(_signer: &signer, amount: u64, token: String) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        if (token == string::utf8(b"USDC")) {
+            interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amount, false);
+        } else if (token == string::utf8(b"APT")) {
+            interact_aries::withdraw<AptosCoin>(vault_signer, amount, false);
+        } else {
+            abort 1;
+        };
+
+        emit(WithdrawLending {
+            amount: amount,
+            token: token
+        });
+    }
+
+    public entry fun lending_withdraw_v2(_signer: &signer, amount: u64, token: String, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            lending_withdraw(_signer, amount, token);
+        } else {
+            lending_withdraw_backup(_signer, amount, token);
+        };
+    }
+
     public entry fun lending_repay_and_withdraw(_signer: &signer, amountAPT_repay: u64, amountUSDC_withdraw: u64) acquires VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
@@ -613,6 +966,33 @@ module delta_hedging::general_vault {
             amount: amountUSDC_withdraw,
             token: stringUSDC()
         });
+    }
+
+    public entry fun lending_repay_and_withdraw_backup(_signer: &signer, amountAPT_repay: u64, amountUSDC_withdraw: u64) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        interact_aries::repay<AptosCoin>(vault_signer, amountAPT_repay as u128);
+        interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amountUSDC_withdraw, false);
+
+        emit(RepayLending {
+            amount: amountAPT_repay,
+            token: stringAPT()
+        });
+        emit(WithdrawLending {
+            amount: amountUSDC_withdraw,
+            token: stringUSDC()
+        });
+    }
+
+    public entry fun lending_repay_and_withdraw_v2(_signer: &signer, amountAPT_repay: u64, amountUSDC_withdraw: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            lending_repay_and_withdraw(_signer, amountAPT_repay, amountUSDC_withdraw);
+        } else {
+            lending_repay_and_withdraw_backup(_signer, amountAPT_repay, amountUSDC_withdraw);
+        };
     }
 
     public entry fun lending_repay_and_withdraw_all(_signer: &signer) acquires VaultRef {
@@ -636,6 +1016,36 @@ module delta_hedging::general_vault {
         });
     }
 
+    public entry fun lending_repay_and_withdraw_all_backup(_signer: &signer) acquires BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        let amountAPT_repay = interact_aries::total_loaning<AptosCoin>(vault_ref.vault_address);
+        interact_aries::repay<AptosCoin>(vault_signer, amountAPT_repay);
+
+        let amountUSDC_withdraw = interact_aries::total_lending<WrappedUSDC>(vault_ref.vault_address);
+        interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amountUSDC_withdraw, false);
+
+        emit(RepayLending {
+            amount: amountAPT_repay as u64,
+            token: stringAPT()
+        });
+        emit(WithdrawLending {
+            amount: amountUSDC_withdraw,
+            token: stringUSDC()
+        });
+    }
+
+    public entry fun lending_repay_and_withdraw_all_v2(_signer: &signer, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        if (is_official) {
+            lending_repay_and_withdraw_all(_signer);
+        } else {
+            lending_repay_and_withdraw_all_backup(_signer);
+        };
+    }
+
     public entry fun cellana_swap_APT_to_USDC(_signer: &signer, amountAPT: u64) acquires VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
@@ -644,10 +1054,36 @@ module delta_hedging::general_vault {
         swap_APT_to_USDC(vault_signer, amountAPT);
     }
 
+    public entry fun cellana_swap_APT_to_USDC_v2(_signer: &signer, amountAPT: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        if (!is_official) {
+            vault_signer = &object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref);
+        };
+
+        swap_APT_to_USDC(vault_signer, amountAPT);
+    }
+
     public entry fun cellana_swap_USDC_to_APT(_signer: &signer, amountUSDC: u64) acquires VaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        swap_USDC_to_APT(vault_signer, amountUSDC);
+    }
+
+    public entry fun cellana_swap_USDC_to_APT_v2(_signer: &signer, amountUSDC: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        if (!is_official) {
+            vault_signer = &object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref);
+        };
 
         swap_USDC_to_APT(vault_signer, amountUSDC);
     }
@@ -917,17 +1353,89 @@ module delta_hedging::general_vault {
         amount
     }
 
+    fun execute_action_internal(signer: &signer, data: vector <u64>): (u64, u64) acquires Vault, VaultRef, BackupVaultRef {
+        only_admin(signer);
+        
+        let amountIn = 0;
+        let amountOut = 0;
+
+        let actions = third_party::unzip_input(data);
+        let i = 0;
+        let len = vector::length(&actions);
+
+        while (i < len) {
+            let action = vector::borrow(&actions, i);
+            let type = third_party::get_type_id(action);
+            let is_open = third_party::get_is_open(action);
+            let is_official = third_party::get_is_official(action);
+            if (type == third_party::perp_id()) {
+                let (amount, leverage, is_long, market_skew) = third_party::get_perp_param(action);
+                if (is_open) {
+                    open_position_v2(signer, amount, leverage, is_long, market_skew, is_official);
+                    amountIn += amount;
+                } else {
+                    close_position_v2(signer, amount, leverage, is_long, market_skew, is_official);
+                    amountOut += amount;
+                };
+            } else if (type == third_party::liquid_id()) {
+                let amount = third_party::get_liquid_param(action);
+                if (is_open) {
+                    liquid_staking_v2(signer, amount, is_official);
+                    amountIn += amount;
+                } else {
+                    liquid_staking_unstake_v2(signer, amount, is_official);
+                    amountOut += amount;
+                }
+            } else if (type == third_party::lending_id()) {
+                let (amount_withdraw, token_withdraw, amount_repay, _token_repay, action) = third_party::get_lending_param(action);
+                if (is_open) {
+                    if (action == third_party::only_withdraw_id()) {
+                        lending_deposit_v2(signer, amount_withdraw, token_withdraw, is_official);
+                    } else if (action == third_party::repay_withdraw_id()) {
+                        lending_deposit_and_borrow_v2(signer, amount_withdraw, amount_repay, is_official);
+                    } else {
+                        abort 1;
+                    };
+                    
+                } else {
+                    amountOut += amount_withdraw;
+                    if (action == third_party::only_withdraw_id()) {
+                        lending_withdraw_v2(signer, amount_withdraw, token_withdraw, is_official);
+                    } else if (action == third_party::repay_withdraw_id()) {
+                        amountIn += amount_repay;
+                        lending_repay_and_withdraw_v2(signer, amount_repay, amount_withdraw, is_official);
+                    } else {
+                        abort 1;
+                    };
+                }
+            };
+            i += 1;
+        };
+
+        (amountIn, amountOut)
+    }
+
+    public entry fun execute_action(signer: &signer, data: vector <u64>) acquires Vault, VaultRef, BackupVaultRef {
+        only_admin(signer);
+        let (_, _) = execute_action_internal(signer, data);
+    }
+
+    fun withdraw_vault_internal_v2(data: vector <u64>): u64 acquires Vault, VaultRef, BackupVaultRef, AdminRef {
+        let admin_ref = borrow_global<AdminRef>(DELTA_HEDGING);
+        let admin_signer = &object::generate_signer_for_extending(&admin_ref.admin_extend_ref);
+        
+        let (_, amount) = execute_action_internal(admin_signer, data);
+
+        amount
+    }
+
     public entry fun withdraw_safety_vault_v2(
         _signer: &signer, 
         account: address,
         data: vector<u64>
-    ) acquires VaultRef {
-        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
-        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
-        let vault_address = vault_ref.vault_address;
+    ) acquires Vault, VaultRef, BackupVaultRef, AdminRef {
 
-        let actions = third_party::unzip_input(data);
-        let amount = withdraw_vault_internal(vault_signer, vault_address, actions);
+        let amount = withdraw_vault_internal_v2(data);
         
         emit(Withdrawn {
             account,
@@ -940,13 +1448,9 @@ module delta_hedging::general_vault {
         _signer: &signer, 
         account: address,
         data: vector<u64>
-    ) acquires VaultRef {
-        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
-        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
-        let vault_address = vault_ref.vault_address;
+    ) acquires Vault, VaultRef , BackupVaultRef, AdminRef {
 
-        let actions = third_party::unzip_input(data);
-        let amount = withdraw_vault_internal(vault_signer, vault_address, actions);
+        let amount = withdraw_vault_internal_v2(data);
         
         emit(Withdrawn {
             account,
@@ -962,9 +1466,14 @@ module delta_hedging::general_vault {
         total_value:  u64,
         close_all: bool,
         data: vector<u64>
-    ) acquires Vault, VaultRef {
+    ) acquires Vault, VaultRef, BackupVaultRef, AdminRef {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let usdc_backup = get_usdc_balance(backup_vault_ref.vault_address);
+        transfer_usdc(&object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref), vault_ref.vault_address, usdc_backup);
+
         let usdc_balance = get_usdc_balance(vault_ref.vault_address);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
 
@@ -1005,9 +1514,14 @@ module delta_hedging::general_vault {
         total_value:  u64,
         close_all: bool,
         data: vector<u64>
-    ) acquires Vault, VaultRef {
+    ) acquires Vault, VaultRef, BackupVaultRef, AdminRef {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let usdc_backup = get_usdc_balance(backup_vault_ref.vault_address);
+        transfer_usdc(&object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref), vault_ref.vault_address, usdc_backup);
+
         let usdc_balance = get_usdc_balance(vault_ref.vault_address);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
 
