@@ -27,6 +27,7 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
     const APT_USDT_LP_ADR: address = @fungible_APT_USDT_LP;
     const USDT_USDC_LP_ADR: address = @fungible_USDT_USDC_LP;
     const AMAPT_APT_LP_ADR: address = @fungible_AMAPT_APT_LP;
+    const APT_USDC_LP_ADR:  address = @fungible_APT_USDC_LP;
 
     const USDC_CHOOSEN: u8 = 1;
     const APT_CHOOSEN: u8 = 2;
@@ -133,8 +134,6 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         owner_signer: &signer,
         amount: u64
         ) {
-        assert!(amount > 0, 0);
-        assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
 
         let amount_out_min = DeltaHedgingStakingV2Storage::get_apt_usdc_price_hyperion_2(
             amount, 
@@ -144,14 +143,13 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         let apt = object::address_to_object<Metadata>(APT_ADDRESS);
         let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
 
-        router_v3::swap_batch(
+        router_v3::swap_batch_coin_directly_deposit_entry<AptosCoin>(
             owner_signer,
-            vector[APT_USDT_LP_ADR, USDT_USDC_LP_ADR],
+            vector[APT_USDC_LP_ADR],
             apt,
             usdc,
             amount,
-            amount_out_min,
-            signer::address_of(owner_signer)
+            amount_out_min
         );
         }
     
@@ -162,8 +160,7 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         coin_to: u8,
         slippage_type: u8
     ): u64 {
-        assert!(amount > 0);
-        assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
+        //assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
 
         DeltaHedgingStakingV2Storage::set_swap_information_in_hyperion(
             owner_signer,
@@ -172,7 +169,8 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
             slippage_type
         );
 
-        let ans = DeltaHedgingStakingV2Storage::get_X_Y_price_hyperion(
+        let ans = DeltaHedgingStakingV2Storage::get_X_Y_price_hyperion_2(
+            signer::address_of(owner_signer),
             amount
         );
         ans
@@ -186,7 +184,7 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
         slippage_type: u8
     ) {
         assert!(amount > 0);
-        assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
+        //assert!(signer::address_of(owner_signer) == DeltaHedgingStakingV2Storage::get_admin_view(), 2);
         let amount_out_min = get_amount_out_X_to_Y_hyperion(
             owner_signer,
             amount,
@@ -195,14 +193,13 @@ module hello_aptos_network::DeltaHedgingStakingV2 {
             slippage_type
         );
 
-        router_v3::swap_batch(
+        router_v3::swap_batch_directly_deposit(
             owner_signer,
-            DeltaHedgingStakingV2Storage::get_adr(),
-            DeltaHedgingStakingV2Storage::get_coin_from(),
-            DeltaHedgingStakingV2Storage::get_coin_to(),
+            DeltaHedgingStakingV2Storage::get_adr_2(signer::address_of(owner_signer)),
+            DeltaHedgingStakingV2Storage::get_coin_from_2(signer::address_of(owner_signer)),
+            DeltaHedgingStakingV2Storage::get_coin_to_2(signer::address_of(owner_signer)),
             amount,
-            amount_out_min,
-            signer::address_of(owner_signer)
+            amount_out_min
         );
     }
         

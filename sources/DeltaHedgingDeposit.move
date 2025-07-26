@@ -33,7 +33,7 @@ module hello_aptos_network::DeltaHedgingDeposit {
 
     const Max_Multiplier: u128 = 1000000000000000000000000; // 1e27
 
-    struct BorrowStatistics<phantom Coin0> has key, copy, store, drop{
+    struct BorrowStatistics<phantom Coin0> has key, copy, store, drop {
         data: BorrowStatistic
     }
 
@@ -193,7 +193,7 @@ module hello_aptos_network::DeltaHedgingDeposit {
     ) acquires BorrowStatistics {
         assert!(input_amount > 0, 0);
         assert!(signer::address_of(owner_signer) == hello_aptos_network::DeltaHedgingStakingV2Storage::get_admin_view(), 1);
-        assert!(collateral_want <= get_borrow_statistic<Coin1>().Collateral_Factor, 3);
+        assert!(collateral_want <= get_borrow_statistic<Coin0>().Collateral_Factor, 3);
 
         let coin0_price = get_price<Coin0>();
         let coin1_price = get_price<Coin1>() * 100;
@@ -204,8 +204,7 @@ module hello_aptos_network::DeltaHedgingDeposit {
                                 / USDC_Multiplier
                                 / Multiplier
                                 / 100;
-        assert!(margin_amount_in_USD >= 5, 4);
-        
+
         controller::deposit_fa<Coin0>(
             owner_signer,
             NAME_BYTES,

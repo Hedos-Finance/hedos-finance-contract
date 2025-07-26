@@ -26,7 +26,7 @@ fungible_USDC           = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd4
 fungible_APT_USDT_LP    = "0x18269b1090d668fbbc01902fa6a5ac6e75565d61860ddae636ac89741c883cbc"
 fungible_USDT_USDC_LP   = "0xd3894aca06d5f42b27c89e6f448114b3ed6a1ba07f992a58b2126c71dd83c127"
 fungible_AMAPT_APT_LP   = "0xce131db3fb4f52c4a1526e2cf1d8a5383a6c5c0beaa610c277856a8721a9b5a3"
-
+fungible_APT_USDC_LP    = "0x925660b8618394809f89f8002e2926600c775221f43bf1919782b297a79400d8"
 [dev-addresses]
 
 [dependencies.AptosFramework]

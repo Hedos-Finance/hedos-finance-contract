@@ -24,9 +24,10 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
     const USDT_ADDRESS:     address = @fungible_USDT;
     const USDC_ADDRESS:     address = @fungible_USDC;
 
-    const APT_USDT_LP_ADR: address = @fungible_APT_USDT_LP;
+    const APT_USDT_LP_ADR:  address = @fungible_APT_USDT_LP;
     const USDT_USDC_LP_ADR: address = @fungible_USDT_USDC_LP;
     const AMAPT_APT_LP_ADR: address = @fungible_AMAPT_APT_LP;
+    const APT_USDC_LP_ADR:  address = @fungible_APT_USDC_LP;
 
     const USDC_CHOOSEN: u8 = 1;
     const APT_CHOOSEN: u8 = 2;
@@ -226,7 +227,7 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
         let apt = object::address_to_object<Metadata>(APT_ADDRESS);
         let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
         let price = router_v3::get_batch_amount_out(
-            vector[APT_USDT_LP_ADR, USDT_USDC_LP_ADR],
+            vector[APT_USDC_LP_ADR],
             amount,
             apt,
             usdc
@@ -240,8 +241,8 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
         coin_from: u8,
         coin_to: u8,
         slippage_type: u8
-    ) acquires StakeAdmin, SwapInformationInHyperion {
-        assert!(signer::address_of(owner_signer) == get_admin_view(), 1);
+    ) acquires SwapInformationInHyperion {
+        //assert!(signer::address_of(owner_signer) == get_admin_view(), 1);
         let coins = vector::empty<address>();
         let x;
         let y;
@@ -262,8 +263,7 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
             
             if(coin_to == USDC_CHOOSEN) {
                 y = object::address_to_object<Metadata>(USDC_ADDRESS);
-                coins.push_back(APT_USDT_LP_ADR);
-                coins.push_back(USDT_USDC_LP_ADR);
+                coins.push_back(APT_USDC_LP_ADR);
             } else {
                 y = object::address_to_object<Metadata>(AMAPT_ADDRESS);
                 coins.push_back(AMAPT_APT_LP_ADR);
@@ -286,12 +286,33 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
             coin_to: y,
             slippage_type
         };
-        let swap_info = borrow_global_mut<SwapInformationInHyperion>(signer::address_of(owner_signer));
+        
         if(!exists<SwapInformationInHyperion>(signer::address_of(owner_signer))) {
             move_to(owner_signer, ans);
         } else {
+            let swap_info = borrow_global_mut<SwapInformationInHyperion>(signer::address_of(owner_signer));
             *swap_info = ans;
         };
+    }
+
+    #[view]
+    public fun get_adr_2(addr: address): vector<address> acquires SwapInformationInHyperion {
+        let swap_info = borrow_global<SwapInformationInHyperion>(addr);
+        swap_info.adr
+    }
+
+
+
+    #[view]
+    public fun get_coin_from_2(addr: address): object::Object<Metadata> acquires SwapInformationInHyperion {
+        let swap_info = borrow_global<SwapInformationInHyperion>(addr);
+        swap_info.coin_from
+    }
+
+    #[view]
+    public fun get_coin_to_2(addr: address): object::Object<Metadata> acquires SwapInformationInHyperion {
+        let swap_info = borrow_global<SwapInformationInHyperion>(addr);
+        swap_info.coin_to
     }
 
     #[view]
@@ -322,6 +343,20 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
             amount,
             get_coin_from(),
             get_coin_to()
+        );
+        price
+    }
+
+     #[view]
+    public fun get_X_Y_price_hyperion_2(
+        addr: address,
+        amount: u64
+    ): u64 acquires SwapInformationInHyperion {
+        let price = router_v3::get_batch_amount_out(
+            get_adr_2(addr),
+            amount,
+            get_coin_from_2(addr),
+            get_coin_to_2(addr)
         );
         price
     }
