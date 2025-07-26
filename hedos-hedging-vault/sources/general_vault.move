@@ -243,10 +243,36 @@ module delta_hedging::general_vault {
     }
 
     #[view]
+    public fun get_total_lending(token: String): u64 acquires VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_address = vault_ref.vault_address;
+        if (token == string::utf8(b"USDC")) {
+            interact_aries::total_lending<WrappedUSDC>(vault_address)
+        } else if (token == string::utf8(b"APT")) {
+            interact_aries::total_lending<AptosCoin>(vault_address)
+        } else {
+            abort 1
+        }
+    }
+
+    #[view]
     public fun get_total_loaning(): u64 acquires VaultRef {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_address = vault_ref.vault_address;
         interact_aries::total_loaning<AptosCoin>(vault_address) as u64
+    }
+
+    #[view]
+    public fun get_lending_price(token: String): u64 acquires VaultRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_address = vault_ref.vault_address;
+        if (token == string::utf8(b"USDC")) {
+            (interact_aries::get_price<WrappedUSDC>() / 1000000) as u64
+        } else if (token == string::utf8(b"APT")) {
+            (interact_aries::get_price<AptosCoin>() / 100) as u64
+        } else {
+            abort 1
+        }
     }
 
     #[view]

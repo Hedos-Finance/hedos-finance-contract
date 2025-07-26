@@ -1,5 +1,5 @@
 [package]
-name = "hedos-interact-thirdparty"
+name = "hedos-interact-thirdparty-2"
 version = "1.0.0"
 authors = []
 
@@ -19,8 +19,8 @@ wrapped_coins           = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4d
 dex_contract            = "0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c"
 
 cellana                 = "0x4bf51972879e3b95c4781a5cdcb9e1ee24ef483e7d22f2d903626f126df62bd1"
-fungible_AMAPT          = "0xe31e39d83acc719369ec42999e855ed3f178627ed8dd413b7d1669da385778e2"
-fungible_APT            = "0xedc2704f2cef417a06d1756a04a16a9fa6faaed13af469be9cdfcac5a21a8e2e"
+fungible_AMAPT          = "0xa259be733b6a759909f92815927fa213904df6540519568692caf0b068fe8e62"
+fungible_APT            = "0xa"
 fungible_lzUSDT         = "0x981d5d65fe5718f5fa0a2696209286641c3a7a62088b6a9f361a8812cb7c2bf3"
 fungible_USDT           = "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
 fungible_USDC           = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
@@ -39,13 +39,5 @@ subdir = "aptos-framework"
 [dev-dependencies]
 
 [dependencies]
-merkle              = { local = "../deps/merkle" }
-merkle-common       = { local = "../deps/merkle-common" }
 amnis               = {local = "../deps/amnis" }
-PancakeSwap         = { local = "../deps/PancakeSwap" }
-MultiRouter         = { local = "../deps/MultiRouter" }
-cellana             = { local = "../deps/cellana" }
-Aries               = { local = "../deps/Aries" }
-Oracle              = { local = "../deps/Oracle" }
-Decimal             = { local = "../deps/Decimal" }
-WrappedCoins        = { local = "../deps/WrappedCoins" }
+dex                 = { local = "../deps/dex" }

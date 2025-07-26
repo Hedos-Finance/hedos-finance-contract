@@ -13,7 +13,7 @@ module delta_hedging::interact_aries {
     const APT_Multiplier: u128 = 10000000000;               // 1e10
     const Multiplier: u128 = 1000000;                       // 1e6
     const Multiplier_2: u128 = 100000000;                   // 1e8
-    const Max_Multiplier: u128 = 1000000000000000000000000; // 1e27
+    const Max_Multiplier: u128 = 100000000000000000000000000; // 1e26
 
     struct BorrowStatistics<phantom Coin0> has key, copy, store, drop{
         data: BorrowStatistic
@@ -64,7 +64,7 @@ module delta_hedging::interact_aries {
             account,
             string::utf8(NAME_BYTES)
         );
-        total_loaning
+        total_loaning * Multiplier_2 / Max_Multiplier
     }
 
     public entry fun initialize<Coin0>(
@@ -156,12 +156,11 @@ module delta_hedging::interact_aries {
     ) {
         let account = signer::address_of(owner_signer);
         let total_coin1_loaning = total_loaning<Coin1>(account);
-        repay_amount_want *= Max_Multiplier / Multiplier_2;
-        assert!(repay_amount_want <= total_coin1_loaning, 2);
+        
         controller::deposit<Coin1>(
             owner_signer,
             NAME_BYTES,
-            (repay_amount_want * Multiplier_2 / Max_Multiplier) as u64,
+            (repay_amount_want) as u64,
             true
         );
     }
@@ -174,7 +173,7 @@ module delta_hedging::interact_aries {
     ): (u64, u64) {
 
         let coin0_price = get_price<Coin0>();
-        let coin1_price = get_price<Coin1>() * 100;
+        let coin1_price = get_price<Coin1>() * 10000;
 
         let borrow_amount = (input_amount as u128) 
                             * (coin0_price as u128) 
@@ -191,7 +190,7 @@ module delta_hedging::interact_aries {
     ): (u64, u64) {
 
         let coin0_price = get_price<Coin0>();
-        let coin1_price = get_price<Coin1>() * 100;
+        let coin1_price = get_price<Coin1>() * 10000;
 
         let borrow_amount = (input_amount as u128) 
                             * (coin0_price as u128) 
@@ -200,6 +199,42 @@ module delta_hedging::interact_aries {
 
         (input_amount, borrow_amount as u64)
     }
+
+    public entry fun deposit_and_borrow_by_rate<Coin0, Coin1>(
+        owner_signer: &signer,
+        input_amount: u64,
+        collateral_want: u8
+    ) {
+    }
+
+    public entry fun deposit_and_borrow_rate<Coin0, Coin1>(
+        owner_signer: &signer,
+        input_amount: u64,
+        collateral_want: u64
+    ) {
+
+        let coin0_price = get_price<Coin0>();
+        let coin1_price = get_price<Coin1>() * 10000;
+
+        let borrow_amount = (input_amount as u128) 
+                            * (coin0_price as u128) 
+                            * (collateral_want as u128) 
+                            / (coin1_price as u128);
+        
+        controller::deposit_fa<Coin0>(
+            owner_signer,
+            NAME_BYTES,
+            input_amount
+        );
+        
+        controller::withdraw<Coin1>(
+            owner_signer,
+            NAME_BYTES,
+            borrow_amount as u64,
+            true
+        );
+    }
+
 
     // cai true/false trong truong hop deposit la option co/khong gui tai san lam collateral
     // false: 
