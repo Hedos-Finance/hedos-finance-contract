@@ -360,6 +360,54 @@ module hello_aptos_network::DeltaHedgingStakingV2Storage {
         );
         price
     }
+
+    #[view]
+    public fun get_amount_out_hyperion(
+        amount: u64,
+        rev: bool
+    ): u64 {
+        let inp_addr;
+        let oup_addr;
+        if (rev) {
+            inp_addr = object::address_to_object<Metadata>(USDC_ADDRESS);
+            oup_addr = object::address_to_object<Metadata>(APT_ADDRESS);
+        } else {
+            inp_addr = object::address_to_object<Metadata>(APT_ADDRESS);
+            oup_addr = object::address_to_object<Metadata>(USDC_ADDRESS);
+        };
+        let price = router_v3::get_batch_amount_out(
+            vector[APT_USDC_LP_ADR],
+            amount,
+            inp_addr,
+            oup_addr
+        );
+        price
+    }
+
+    #[view]
+    public fun get_amount_in_hyperion(
+        amount: u64,
+        rev: bool
+    ): u64 {
+        let inp_addr;
+        let oup_addr;
+        if (rev) {
+            inp_addr = object::address_to_object<Metadata>(USDC_ADDRESS);
+            oup_addr = object::address_to_object<Metadata>(APT_ADDRESS);
+        } else {
+            inp_addr = object::address_to_object<Metadata>(APT_ADDRESS);
+            oup_addr = object::address_to_object<Metadata>(USDC_ADDRESS);
+        };
+
+        let price = router_v3::get_batch_amount_in(
+            vector[APT_USDC_LP_ADR],
+            amount,
+            inp_addr,
+            oup_addr
+        );
+        price
+    }
+
 }
 
 
