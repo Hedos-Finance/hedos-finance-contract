@@ -2,7 +2,7 @@ module delta_hedging::token {
     use delta_hedging::white_list::{only_admin};
     use aptos_framework::aptos_account::{transfer_fungible_assets, transfer_coins};
     use aptos_framework::fungible_asset::{Metadata};
-    use aptos_framework::object::{address_to_object};
+    use aptos_framework::object::{Self};
     use aptos_framework::primary_fungible_store;
     use aptos_framework::aptos_coin::AptosCoin;
 
@@ -34,7 +34,7 @@ module delta_hedging::token {
         to: address,
         amount: u64,
     ) {
-        let usdc = address_to_object<Metadata>(USDC_ADDRESS);
+        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
         transfer_fungible_assets(from, usdc, to, amount);
     }
 
@@ -48,7 +48,7 @@ module delta_hedging::token {
 
     #[view]
     public fun get_usdc_balance(account: address): u64{
-        let usdc = address_to_object<Metadata>(USDC_ADDRESS);
+        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
         let balance = primary_fungible_store::balance<Metadata>(account, usdc);
         balance
     }

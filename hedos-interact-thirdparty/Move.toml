@@ -16,7 +16,6 @@ aries                   = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4d
 oracle                  = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
 decimal                 = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
 wrapped_coins           = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
-dex_contract            = "0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c"
 
 cellana                 = "0x4bf51972879e3b95c4781a5cdcb9e1ee24ef483e7d22f2d903626f126df62bd1"
 fungible_AMAPT          = "0xe31e39d83acc719369ec42999e855ed3f178627ed8dd413b7d1669da385778e2"
@@ -25,9 +24,19 @@ fungible_lzUSDT         = "0x981d5d65fe5718f5fa0a2696209286641c3a7a62088b6a9f361
 fungible_USDT           = "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
 fungible_USDC           = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
 
-fungible_APT_USDT_LP    = "0x18269b1090d668fbbc01902fa6a5ac6e75565d61860ddae636ac89741c883cbc"
-fungible_USDT_USDC_LP   = "0xd3894aca06d5f42b27c89e6f448114b3ed6a1ba07f992a58b2126c71dd83c127"
-fungible_AMAPT_APT_LP   = "0xce131db3fb4f52c4a1526e2cf1d8a5383a6c5c0beaa610c277856a8721a9b5a3"
+dex_contract            = "0x8b4a2c4bb53857c718a04c020b98f8c2e1f99a68b0f57389a8bf5434cd22e05c"
+
+hyper_fungible_AMAPT          = "0xa259be733b6a759909f92815927fa213904df6540519568692caf0b068fe8e62"
+hyper_fungible_APT            = "0xa"
+hyper_fungible_lzUSDT         = "0x981d5d65fe5718f5fa0a2696209286641c3a7a62088b6a9f361a8812cb7c2bf3"
+hyper_fungible_USDT           = "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b"
+hyper_fungible_USDC           = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
+
+
+hyper_fungible_APT_USDT_LP    = "0x18269b1090d668fbbc01902fa6a5ac6e75565d61860ddae636ac89741c883cbc"
+hyper_fungible_USDT_USDC_LP   = "0xd3894aca06d5f42b27c89e6f448114b3ed6a1ba07f992a58b2126c71dd83c127"
+hyper_fungible_AMAPT_APT_LP   = "0xce131db3fb4f52c4a1526e2cf1d8a5383a6c5c0beaa610c277856a8721a9b5a3"
+hyper_fungible_APT_USDC_LP    = "0x925660b8618394809f89f8002e2926600c775221f43bf1919782b297a79400d8"
 
 [dev-addresses]
 
@@ -42,10 +51,8 @@ subdir = "aptos-framework"
 merkle              = { local = "../deps/merkle" }
 merkle-common       = { local = "../deps/merkle-common" }
 amnis               = {local = "../deps/amnis" }
-PancakeSwap         = { local = "../deps/PancakeSwap" }
-MultiRouter         = { local = "../deps/MultiRouter" }
-cellana             = { local = "../deps/cellana" }
 Aries               = { local = "../deps/Aries" }
 Oracle              = { local = "../deps/Oracle" }
 Decimal             = { local = "../deps/Decimal" }
 WrappedCoins        = { local = "../deps/WrappedCoins" }
+dex                 = { local = "../deps/dex" }
