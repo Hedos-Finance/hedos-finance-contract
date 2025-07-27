@@ -22,6 +22,7 @@ module delta_hedging::interace_hyperion {
     const APT_USDT_LP_ADR: address = @fungible_APT_USDT_LP;
     const USDT_USDC_LP_ADR: address = @fungible_USDT_USDC_LP;
     const AMAPT_APT_LP_ADR: address = @fungible_AMAPT_APT_LP;
+    const APT_USDC_LP_ADR:  address = @fungible_APT_USDC_LP;
 
     const USDC_CHOOSEN: u8 = 1;
     const APT_CHOOSEN: u8 = 2;
@@ -33,29 +34,30 @@ module delta_hedging::interace_hyperion {
     ) {
     }
 
+    
     public entry fun swap_APT_to_USDC_hyperion<AptosCoin>(
         owner_signer: &signer,
         amount: u64
-    ) {
-        let amount_out_min = storage::get_apt_usdc_price_hyperion_2(
-            amount, 
-            1
-        );
+        ) {
 
-        let apt = object::address_to_object<Metadata>(APT_ADDRESS);
-        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+            let amount_out_min = storage::get_apt_usdc_price_hyperion_2(
+                amount, 
+                1
+            );
 
-        router_v3::swap_batch(
-            owner_signer,
-            vector[APT_USDT_LP_ADR, USDT_USDC_LP_ADR],
-            apt,
-            usdc,
-            amount,
-            amount_out_min,
-            signer::address_of(owner_signer)
-        );
-    }
-    
+            let apt = object::address_to_object<Metadata>(APT_ADDRESS);
+            let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+
+            router_v3::swap_batch_coin_directly_deposit_entry<AptosCoin>(
+                owner_signer,
+                vector[APT_USDC_LP_ADR],
+                apt,
+                usdc,
+                amount,
+                amount_out_min
+            );
+        }
+        
     public fun hyperion_get_amount_out_X_to_Y(
         owner_signer: &signer,
         amount: u64,

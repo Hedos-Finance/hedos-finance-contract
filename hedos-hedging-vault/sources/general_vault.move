@@ -18,7 +18,9 @@ module delta_hedging::general_vault {
     use delta_hedging::token::{transfer_usdc, transfer_apt, get_usdc_balance, update_balance};
     use delta_hedging::interact_merkle_trade::{simple_trade_v2};
     use delta_hedging::interact_amnis::{stake, unstake_amAPT, price_stAPT};
-    use delta_hedging::interact_cellana::{swap_USDC_to_APT, swap_APT_to_USDC, swap_amAPT_to_USDC, get_amounts_out_USDC_APT_cellana, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
+    use delta_hedging::interact_cellana::{swap_USDC_to_APT, swap_APT_to_USDC, swap_amAPT_to_USDC, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
+    use delta_hedging::interace_hyperion::{Self};
+    use delta_hedging::storage::{Self};
     use delta_hedging::fund_fee::{update_current_deposited};
     use delta_hedging::interact_aries::{Self};
     use delta_hedging::third_party::{Self, ThirdParty};
@@ -198,6 +200,12 @@ module delta_hedging::general_vault {
     }
 
     #[view]
+    public fun get_backup_vault_address(): address acquires BackupVaultRef {
+        let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        vault_ref.vault_address
+    }
+
+    #[view]
     public fun get_total_value_lock(): u64 acquires Vault, VaultRef {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global<Vault>(vault_ref.vault_address);
@@ -267,7 +275,7 @@ module delta_hedging::general_vault {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_address = vault_ref.vault_address;
         if (token == string::utf8(b"USDC")) {
-            (interact_aries::get_price<WrappedUSDC>() / 1000000) as u64
+            (interact_aries::get_price<WrappedUSDC>() / 10000) as u64
         } else if (token == string::utf8(b"APT")) {
             (interact_aries::get_price<AptosCoin>() / 100) as u64
         } else {
@@ -313,6 +321,16 @@ module delta_hedging::general_vault {
         let risky_rate_denominator = borrow_global<Vault>(vault_address).fund_fee_risky_rate_denominator;
       
         (risky_rate_numerator, risky_rate_denominator)
+    }
+
+    #[view]
+    public fun get_APT_USDC_amount_out(amount: u64, rev: bool): u64 {
+        storage::get_amount_out_hyperion(amount, rev)
+    }
+
+    #[view]
+    public fun get_APT_USDC_amount_in(amount: u64, rev: bool): u64 {
+        storage::get_amount_in_hyperion(amount, rev)
     }
     
     public entry fun init_vault(signer: &signer) acquires VaultRef {
@@ -588,10 +606,10 @@ module delta_hedging::general_vault {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
-        let amountAPTMin = get_amounts_out_USDC_APT_cellana(amountUSDC);
+        let amountAPTMin = get_APT_USDC_amount_out(amountUSDC, true);
 
         let amount_stake_before = get_apt_balance(vault_ref.vault_address);
-        swap_USDC_to_APT(vault_signer, amountUSDC);
+        hyperion_swap_USDC_to_APT(vault_signer, amountUSDC);
         let amount_stake_after = get_apt_balance(vault_ref.vault_address) ;
         let amount_stake = amount_stake_after - amount_stake_before;
 
@@ -606,10 +624,10 @@ module delta_hedging::general_vault {
         only_admin(_signer);
         let vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
-        let amountAPTMin = get_amounts_out_USDC_APT_cellana(amountUSDC);
+        let amountAPTMin = get_APT_USDC_amount_out(amountUSDC, true);
 
         let amount_stake_before = get_apt_balance(vault_ref.vault_address);
-        swap_USDC_to_APT(vault_signer, amountUSDC);
+        hyperion_swap_USDC_to_APT(vault_signer, amountUSDC);
         let amount_stake_after = get_apt_balance(vault_ref.vault_address) ;
         let amount_stake = amount_stake_after - amount_stake_before;
 
@@ -1080,6 +1098,14 @@ module delta_hedging::general_vault {
         swap_APT_to_USDC(vault_signer, amountAPT);
     }
 
+    public entry fun hyperion_swap_APT_to_USDC(_signer: &signer, amountAPT: u64) acquires VaultRef {
+        only_admin(_signer: &signer, ammountAPT: u64);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        interace_hyperion::swap_APT_to_USDC_hyperion<AptosCoin>(vault_signer, amountAPT);
+    }
+
     public entry fun cellana_swap_APT_to_USDC_v2(_signer: &signer, amountAPT: u64, is_official: bool) acquires VaultRef, BackupVaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
@@ -1099,6 +1125,14 @@ module delta_hedging::general_vault {
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
 
         swap_USDC_to_APT(vault_signer, amountUSDC);
+    }
+
+    public entry fun hyperion_swap_USDC_to_APT(_signer: &signer, amountUSDC: u64) acquires VaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        interace_hyperion::hyperion_swap_X_To_Y(vault_signer, amountUSDC, 1, 2, 1);
     }
 
     public entry fun cellana_swap_USDC_to_APT_v2(_signer: &signer, amountUSDC: u64, is_official: bool) acquires VaultRef, BackupVaultRef {

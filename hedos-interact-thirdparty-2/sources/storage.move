@@ -15,7 +15,7 @@ module delta_hedging::storage {
 
     use dex_contract::router_v3;
     use dex_contract::pool_v3;
-    
+
     const PRECISION: u128 = 100000000;
 
     const AMAPT_ADDRESS:    address = @fungible_AMAPT;
@@ -24,9 +24,10 @@ module delta_hedging::storage {
     const USDT_ADDRESS:     address = @fungible_USDT;
     const USDC_ADDRESS:     address = @fungible_USDC;
 
-    const APT_USDT_LP_ADR: address = @fungible_APT_USDT_LP;
+    const APT_USDT_LP_ADR:  address = @fungible_APT_USDT_LP;
     const USDT_USDC_LP_ADR: address = @fungible_USDT_USDC_LP;
     const AMAPT_APT_LP_ADR: address = @fungible_AMAPT_APT_LP;
+    const APT_USDC_LP_ADR:  address = @fungible_APT_USDC_LP;
 
     const USDC_CHOOSEN: u8 = 1;
     const APT_CHOOSEN: u8 = 2;
@@ -228,6 +229,107 @@ module delta_hedging::storage {
             amount,
             get_coin_from(),
             get_coin_to()
+        );
+        price
+    }
+
+    
+    #[view]
+    public fun get_amount_out_hyperion(
+        amount: u64,
+        rev: bool
+    ): u64 {
+        let inp_addr;
+        let oup_addr;
+        if (rev) {
+            inp_addr = object::address_to_object<Metadata>(USDC_ADDRESS);
+            oup_addr = object::address_to_object<Metadata>(APT_ADDRESS);
+        } else {
+            inp_addr = object::address_to_object<Metadata>(APT_ADDRESS);
+            oup_addr = object::address_to_object<Metadata>(USDC_ADDRESS);
+        };
+        let price = router_v3::get_batch_amount_out(
+            vector[APT_USDC_LP_ADR],
+            amount,
+            inp_addr,
+            oup_addr
+        );
+        price
+    }
+
+    #[view]
+    public fun get_amount_in_hyperion(
+        amount: u64,
+        rev: bool
+    ): u64 {
+        let inp_addr;
+        let oup_addr;
+        if (rev) {
+            inp_addr = object::address_to_object<Metadata>(USDC_ADDRESS);
+            oup_addr = object::address_to_object<Metadata>(APT_ADDRESS);
+        } else {
+            inp_addr = object::address_to_object<Metadata>(APT_ADDRESS);
+            oup_addr = object::address_to_object<Metadata>(USDC_ADDRESS);
+        };
+
+        let price = router_v3::get_batch_amount_in(
+            vector[APT_USDC_LP_ADR],
+            amount,
+            inp_addr,
+            oup_addr
+        );
+        price
+    }
+
+
+    #[view]
+    public fun get_X_to_Y_out(
+        amount: u64,
+        coin_from: u8,
+        coin_to: u8,
+        slippage_type: u8
+    ): u64 {
+        let coins = vector::empty<address>();
+        let x;
+        let y;
+        if (coin_from == USDC_CHOOSEN) {
+            x = object::address_to_object<Metadata>(USDC_ADDRESS);
+            y = object::address_to_object<Metadata>(APT_ADDRESS);
+
+            coins.push_back(APT_USDC_LP_ADR);
+
+            if (coin_to == AMAPT_CHOOSEN) {
+                y = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+
+                coins.push_back(AMAPT_APT_LP_ADR);
+            };
+        } else if (coin_from == APT_CHOOSEN) {
+            x = object::address_to_object<Metadata>(APT_ADDRESS);
+            
+            if(coin_to == USDC_CHOOSEN) {
+                y = object::address_to_object<Metadata>(USDC_ADDRESS);
+                coins.push_back(APT_USDC_LP_ADR);
+            } else {
+                y = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+                coins.push_back(AMAPT_APT_LP_ADR);
+            };
+        } else {
+            x = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+            y = object::address_to_object<Metadata>(APT_ADDRESS);
+
+            coins.push_back(AMAPT_APT_LP_ADR);
+
+            if (coin_to == USDC_CHOOSEN) {
+                y = object::address_to_object<Metadata>(USDC_ADDRESS);
+                coins.push_back(APT_USDC_LP_ADR);
+            };
+        };
+
+        let price = router_v3::get_batch_amount_out(
+            coins,
+            amount,
+            x,
+            y
         );
         price
     }

@@ -23,6 +23,16 @@ module dex_contract::router_v3 {
         0
     }
 
+    #[view]
+    public fun get_batch_amount_in(
+        _lp_path: vector<address>,
+        _amount_out: u64,
+        _from_token: Object<Metadata>,
+        _to_token: Object<Metadata>
+    ): u64 {
+        0
+    }
+
     public entry fun swap_batch(
         _user: &signer,
         _lp_path: vector<address>,
@@ -31,6 +41,17 @@ module dex_contract::router_v3 {
         _amount_in: u64,
         _amount_out_min: u64,
         _recipient: address,
+    ) {
+        abort(0);
+    }
+
+    public entry fun swap_batch_directly_deposit(
+        _user: &signer,
+        _lp_path: vector<address>,
+        _from_token: Object<Metadata>,
+        _to_token: Object<Metadata>,
+        _amount_in: u64,
+        _amount_out_min: u64
     ) {
         abort(0);
     }
