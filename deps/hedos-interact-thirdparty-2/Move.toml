@@ -1,0 +1,17 @@
+[package]
+name = "hedos-interact-thirdparty-2"
+version = "1.0.0"
+authors = []
+published-at = "0x0b1aeace2c12b282262fefc510704f2b37dca678fe7bdc3794628c5eaabc76dd"
+
+[addresses]
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
+
+[dependencies]

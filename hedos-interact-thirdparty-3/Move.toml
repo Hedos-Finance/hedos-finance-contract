@@ -1,13 +1,12 @@
 [package]
-name = "hedos-interact-thirdparty-2"
+name = "hedos-interact-thirdparty-3"
 version = "1.0.0"
 authors = []
 
 [addresses]
-fauz                    = "0x0b1aeace2c12b282262fefc510704f2b37dca678fe7bdc3794628c5eaabc76dd"
 merkle                  = "0x5ae6789dd2fec1a9ec9cccfb3acaf12e93d432f0a3a42c92fe1a9d490b7bbc06"
 amnis                   = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"
-delta_hedging           = "0x0b1aeace2c12b282262fefc510704f2b37dca678fe7bdc3794628c5eaabc76dd"
+delta_hedging_interact           = "0x3a081c23fc26e8470a34d6eaa8289029d28ba8abd40669265204e75a69a333a1"
 pancakeswap             = "0xc7efb4076dbe143cbcd98cfaaa929ecfc8f299203dfff63b95ccb6bfe19850fa"
 multi_router            = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
 aptos_framework         = "0x1"
@@ -40,5 +39,11 @@ subdir = "aptos-framework"
 [dev-dependencies]
 
 [dependencies]
+merkle              = { local = "../deps/merkle" }
+merkle-common       = { local = "../deps/merkle-common" }
+Aries               = { local = "../deps/Aries" }
+Oracle              = { local = "../deps/Oracle" }
+Decimal             = { local = "../deps/Decimal" }
+WrappedCoins        = { local = "../deps/WrappedCoins" }
 amnis               = {local = "../deps/amnis" }
 dex                 = { local = "../deps/dex" }

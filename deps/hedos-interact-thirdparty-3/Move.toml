@@ -1,0 +1,19 @@
+[package]
+name = "hedos-interact-thirdparty-3"
+version = "1.0.0"
+authors = []
+published-at = "0x3a081c23fc26e8470a34d6eaa8289029d28ba8abd40669265204e75a69a333a1"
+
+[addresses]
+delta_hedging_interact = "0x3a081c23fc26e8470a34d6eaa8289029d28ba8abd40669265204e75a69a333a1"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
+
+[dependencies]
