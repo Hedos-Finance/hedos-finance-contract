@@ -35,5 +35,6 @@ subdir = "aptos-framework"
 
 [dependencies]
 hedos-interact-thirdparty   = { local = "../hedos-interact-thirdparty"}
+hedos-interact-thirdparty-2   = { local = "../hedos-interact-thirdparty-2"}
 amnis               = {local = "../deps/amnis" }
 WrappedCoins        = { local = "../deps/WrappedCoins" }

@@ -18,7 +18,7 @@ module delta_hedging::general_vault {
     use delta_hedging::token::{transfer_usdc, transfer_apt, get_usdc_balance, update_balance};
     use delta_hedging::interact_merkle_trade::{simple_trade_v2};
     use delta_hedging::interact_amnis::{stake, unstake_amAPT, price_stAPT};
-    use delta_hedging::interact_cellana::{get_amount_in_hyperion, swap_USDC_to_APT, swap_APT_to_USDC, swap_amAPT_to_USDC, get_amounts_out_USDC_APT_cellana, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
+    use delta_hedging::interact_cellana::{swap_USDC_to_APT, swap_APT_to_USDC, swap_amAPT_to_USDC, get_amounts_out_USDC_APT_cellana, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
     use delta_hedging::fund_fee::{update_current_deposited};
     use delta_hedging::interact_aries::{Self};
     use delta_hedging::third_party::{Self, ThirdParty};
@@ -323,7 +323,7 @@ module delta_hedging::general_vault {
 
     #[view]
     public fun get_APT_USDC_amount_in(amount: u64, rev: bool): u64 {
-        get_amount_in_hyperion(amount, rev)
+        0
     }
     
     public entry fun init_vault(signer: &signer) acquires VaultRef {
@@ -527,12 +527,34 @@ module delta_hedging::general_vault {
         });
     }
 
-    public entry fun open_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires Vault, VaultRef {
+    public entry fun transfer_all_usdc_internal(_signer: &signer) acquires VaultRef, BackupVaultRef {
+        only_admin(_signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_address = vault_ref.vault_address;
+
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let backup_vault_signer = &object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref);
+        let backup_vault_address = backup_vault_ref.vault_address;
+        let usdc_balance = get_usdc_balance(backup_vault_address);
+
+        transfer_usdc(backup_vault_signer, vault_address, usdc_balance);
+    }
+
+    public entry fun open_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires Vault, VaultRef, BackupVaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let backup_vault_signer = &object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref);
+
         let pair = get_pair();
-        simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, true, market_skew, pair);
+        if (!is_long) {
+            simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, true, market_skew, pair);
+        } else {
+            transfer_usdc(vault_signer, backup_vault_ref.vault_address, collateral_delta);
+            simple_trade_v2(backup_vault_signer, backup_vault_ref.vault_address, collateral_delta, leverage, is_long, true, market_skew, pair);
+        };
 
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
         vault.total_perpeptual += collateral_delta;
@@ -560,13 +582,20 @@ module delta_hedging::general_vault {
         };
     }
 
-    public entry fun close_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires Vault, VaultRef {
+    public entry fun close_position(_signer: &signer, collateral_delta: u64, leverage: u64, is_long: bool, market_skew: bool) acquires Vault, VaultRef, BackupVaultRef {
         only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let backup_vault_signer = &object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref);
+
         let pair = get_pair();
-        
-        simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, false, market_skew, pair);
+        if (!is_long) {
+            simple_trade_v2(vault_signer, vault_ref.vault_address, collateral_delta, leverage, is_long, false, market_skew, pair);
+        } else {
+            simple_trade_v2(backup_vault_signer, backup_vault_ref.vault_address, collateral_delta, leverage, is_long, false, market_skew, pair);
+        };
 
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
         vault.total_perpeptual = safe_sub(vault.total_perpeptual, collateral_delta);
