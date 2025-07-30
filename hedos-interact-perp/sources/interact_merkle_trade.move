@@ -1,12 +1,13 @@
-module delta_hedging::interact_merkle_trade {
+module hedos::interact_merkle_trade {
     use std::string::{String,utf8};
-    use merkle::managed_trading;
 
     use merkle::pair_types::APT_USD;
     use merkle::fa_box::W_USDC;
 
+    use merkle::managed_trading;
+
     #[view]
-    public fun get_size_delta_and_collateral_delta_v2(
+    public fun get_size_delta_and_collateral_delta(
         _collateral_delta: u64,
         _leverage: u64,
         _open: bool,
@@ -23,7 +24,9 @@ module delta_hedging::interact_merkle_trade {
                 denominator += _leverage * 8;
             };
 
-            let new_collateral_delta_64 = (_collateral_delta as u256) * (numerator as u256) / (denominator as u256);
+            numerator = denominator - numerator;
+            let fee = (_collateral_delta as u256) * (numerator as u256) / (denominator as u256);
+            let new_collateral_delta_64 = (_collateral_delta as u256) - fee;
             let new_collateral_delta = new_collateral_delta_64 as u64;
 
             let _size_delta = new_collateral_delta * _leverage;
@@ -39,7 +42,7 @@ module delta_hedging::interact_merkle_trade {
         }
     }
 
-    public entry fun simple_trade_v2(
+    public entry fun simple_trade(
         _signer: &signer,
         _user_address: address,
         _collateral_delta: u64,
@@ -54,7 +57,7 @@ module delta_hedging::interact_merkle_trade {
             maker = !maker;
         };
         
-        let (size_delta, collateral_delta) = get_size_delta_and_collateral_delta_v2(_collateral_delta, _leverage, _open, maker, _pair);
+        let (size_delta, collateral_delta) = get_size_delta_and_collateral_delta(_collateral_delta, _leverage, _open, maker, _pair);
         if (_pair == utf8(b"APT_USD")) {
             if (!_is_long) {
                 if (_open) {
@@ -73,26 +76,6 @@ module delta_hedging::interact_merkle_trade {
         else {
             abort 1;
         };
-    }
-
-    public fun get_size_delta_and_collateral_delta(
-        _collateral_delta: u64,
-        _leverage: u64,
-        _open: bool,
-        _pair: String,
-    ): (u64, u64) {
-        (0, 0)
-    }
-
-    public entry fun simple_trade(
-        _signer: &signer,
-        _user_address: address,
-        _collateral_delta: u64,
-        _leverage: u64,
-        _is_long: bool,
-        _open: bool,
-        _pair: String,
-    ) {
     }
     
     public entry fun open_short_order<PairType, CollateralType> (
@@ -215,12 +198,4 @@ module delta_hedging::interact_merkle_trade {
             _referrer
         );        
     }
-
-    // public fun get_hehehe(
-    //     _collateral_delta: u64,
-    //     _leverage: u64,
-    //     _open: bool,
-    // ): (u64, u64) {
-    //     (0, 0)
-    // }
 }

@@ -1,4 +1,4 @@
-module delta_hedging::interact_amnis{
+module hedos::interact_amnis{
     use amnis::router;
     use amnis::amapt_token::AmnisApt;
     use amnis::stapt_token::StakedApt;

@@ -1,0 +1,16 @@
+[package]
+name = "hedos-whitelist"
+version = "1.0.0"
+authors = []
+
+[addresses]
+hedos                   = "0xb9043885f5adaecebb0cd03716cd22fc364f375cd58c6f5729ad21158a8de25a"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]

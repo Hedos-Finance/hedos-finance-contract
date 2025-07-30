@@ -1,4 +1,4 @@
-module delta_hedging::third_party {
+module hedos::third_party {
     use std::string::{Self, String};
     use std::vector;
 
@@ -332,33 +332,5 @@ module delta_hedging::third_party {
 
     public fun repay_withdraw_id(): u8 {
         2
-    }
-
-
-    public fun check(actions: vector<ThirdParty>): u64 {
-        let i = 0;
-        let len = actions.length();
-        let sum = 0;
-        while (i < len) {
-            let x = actions.borrow(i);
-            sum += get_type_id(x) as u64;
-            i = i + 1;
-        };
-        sum
-    }
-
-    #[view]
-    public fun checkString(s: String): bool {
-        s == string::utf8(b"APT")
-    }
-
-    #[view]
-    public fun stringAPT(): string::String {
-        string::utf8(b"APT")
-    }
-
-    #[view]
-    public fun stringUSDC(): string::String {
-        string::utf8(b"USDC")
     }
 }

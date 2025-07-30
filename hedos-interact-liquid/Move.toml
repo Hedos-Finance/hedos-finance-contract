@@ -1,5 +1,5 @@
 [package]
-name = "hedos-hedging-vault"
+name = "hedos-interact-liquid"
 version = "1.0.0"
 authors = []
 
@@ -16,8 +16,6 @@ subdir = "aptos-framework"
 [dev-dependencies]
 
 [dependencies]
-hedos-utils = { local = "../hedos-utils" }
-hedos-whitelist = { local = "../hedos-whitelist" }
-hedos-interact-lending = { local = "../hedos-interact-lending" }
-hedos-interact-liquid = { local = "../hedos-interact-liquid" }
-hedos-interact-perp = { local = "../hedos-interact-perp" }
+amnis               = { local = "../deps/amnis" }
+hedos-interact-swap = { local = "../hedos-interact-swap" }
+hedos-utils         = { local = "../hedos-utils" }
