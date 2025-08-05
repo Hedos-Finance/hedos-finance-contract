@@ -16,7 +16,7 @@ module delta_hedging::general_vault {
 
     use delta_hedging::white_list::{only_admin, add_admin};
     use delta_hedging::token::{transfer_usdc, transfer_apt, get_usdc_balance, update_balance};
-    use delta_hedging::interact_merkle_trade::{simple_trade_v2};
+    use delta_hedging::interact_merkle_trade::{simple_trade_v2, };
     use delta_hedging::interact_amnis::{stake, unstake_amAPT, price_stAPT};
     use delta_hedging::interact_cellana::{swap_USDC_to_APT, swap_APT_to_USDC, swap_amAPT_to_USDC, get_amounts_out_USDC_APT_cellana, get_amounts_out_APT_USDC_cellana, get_amounts_out_USDC_amAPT_cellana, get_amounts_out_amAPT_USDC_cellana};
     use delta_hedging::fund_fee::{update_current_deposited};
@@ -84,6 +84,26 @@ module delta_hedging::general_vault {
     }
 
     struct BackupVaultRef has key {
+        vault_address: address,
+        vault_extend_ref: ExtendRef,
+    }
+
+    struct ReservePool has key {
+
+    }
+
+    struct ReservePoolRef has key {
+        vault_address: address,
+        vault_extend_ref: ExtendRef,
+    }
+
+
+
+    struct RewardPool has key {
+        risky_balance: u64,
+        safety_balance: u64
+    }
+    struct RewardPoolRef has key {
         vault_address: address,
         vault_extend_ref: ExtendRef,
     }
@@ -394,6 +414,103 @@ module delta_hedging::general_vault {
             vault_ref.vault_address = new_vault_address;
             vault_ref.vault_extend_ref = extend_ref;
         };
+    }
+
+    public entry fun init_reserve_pool(signer: &signer) acquires ReservePoolRef {
+        only_admin(signer);
+        let constructor_ref = &object::create_object(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer(constructor_ref);
+        let extend_ref = object::generate_extend_ref(constructor_ref);
+        let new_vault_address = signer::address_of(vault_signer);
+
+        let new_vault = ReservePool {};
+
+        move_to(vault_signer, new_vault);   
+
+
+        if (!exists<ReservePoolRef>(DELTA_HEDGING)) {
+            move_to(signer, ReservePoolRef {
+                vault_address: new_vault_address,
+                vault_extend_ref: extend_ref,
+            })
+        } else {
+            let vault_ref = borrow_global_mut<ReservePoolRef>(DELTA_HEDGING);
+            vault_ref.vault_address = new_vault_address;
+            vault_ref.vault_extend_ref = extend_ref;
+        };
+    }
+
+    #[view]
+    public fun get_reserve_pool_address(): address acquires ReservePoolRef {
+        let reserve_pool_ref = borrow_global<ReservePoolRef>(DELTA_HEDGING);
+        reserve_pool_ref.vault_address
+    }
+
+    public entry fun deposit_to_reserve_pool(signer: &signer, amountUSDC: u64) acquires ReservePoolRef {
+        let reserve_pool_ref = borrow_global<ReservePoolRef>(DELTA_HEDGING);
+        let reserve_pool_address = reserve_pool_ref.vault_address;
+        transfer_usdc(signer, reserve_pool_address, amountUSDC);
+    }
+
+    public entry fun transfer_from_reserve_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, ReservePoolRef { 
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_address = vault_ref.vault_address;
+
+        let reserve_pool_ref = borrow_global<ReservePoolRef>(DELTA_HEDGING);
+        let reserve_pool_signer = &object::generate_signer_for_extending(&reserve_pool_ref.vault_extend_ref);
+
+        transfer_usdc(reserve_pool_signer, vault_address, amountUSDC);
+    }
+    
+    public entry fun init_reward_pool(signer: &signer) acquires RewardPoolRef {
+        only_admin(signer);
+        let constructor_ref = &object::create_object(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer(constructor_ref);
+        let extend_ref = object::generate_extend_ref(constructor_ref);
+        let new_vault_address = signer::address_of(vault_signer);
+
+        let new_vault = RewardPool {
+            risky_balance: 0,
+            safety_balance: 0
+        };
+
+        move_to(vault_signer, new_vault);   
+
+
+        if (!exists<RewardPoolRef>(DELTA_HEDGING)) {
+            move_to(signer, RewardPoolRef {
+                vault_address: new_vault_address,
+                vault_extend_ref: extend_ref,
+            })
+        } else {
+            let vault_ref = borrow_global_mut<RewardPoolRef>(DELTA_HEDGING);
+            vault_ref.vault_address = new_vault_address;
+            vault_ref.vault_extend_ref = extend_ref;
+        };
+    }
+
+    #[view]
+    public fun get_reward_pool_address(): address acquires RewardPoolRef {
+        let reward_pool_ref = borrow_global<RewardPoolRef>(DELTA_HEDGING);
+        reward_pool_ref.vault_address
+    }
+
+    public entry fun deposit_to_reward_pool(signer: &signer, amountUSDC: u64) acquires RewardPoolRef {
+        let reward_pool_ref = borrow_global<RewardPoolRef>(DELTA_HEDGING);
+        let reward_pool_address = reward_pool_ref.vault_address;
+        transfer_usdc(signer, reward_pool_address, amountUSDC);
+    }
+
+    public entry fun transfer_from_reward_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, RewardPoolRef { 
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_address = vault_ref.vault_address;
+
+        let reward_pool_ref = borrow_global<RewardPoolRef>(DELTA_HEDGING);
+        let reward_pool_signer = &object::generate_signer_for_extending(&reward_pool_ref.vault_extend_ref);
+
+        transfer_usdc(reward_pool_signer, vault_address, amountUSDC);
     }
 
     public entry fun init_admin_ref(signer: &signer) acquires AdminRef {
@@ -1560,7 +1677,7 @@ module delta_hedging::general_vault {
                 vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
                 vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
                 transfer_usdc(vault_signer, account, amount_remain_transfer);
-                update_current_deposited(0, amount_remain_transfer, false);
+                update_current_deposited(amount_remain_transfer, 0, false);
             };
         };
         
@@ -1744,6 +1861,21 @@ module delta_hedging::general_vault {
 
         set_share_table(&mut vault.users_share_in_safety_vault, account);
         set_share_table(&mut vault.users_share_in_risky_vault, account);
+    }
+
+    
+    fun set_share_table_v2(share_table: &mut Table<address, u256>, account: address, new_share: u256) {
+        let share = table::borrow_mut_with_default(share_table, account, 0);
+        *share = new_share;
+    }
+
+    public entry fun set_share_table_user_v2(signer: &signer, account: address, safety: u256, risky: u256) acquires Vault, VaultRef{
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+
+        set_share_table_v2(&mut vault.users_share_in_safety_vault, account, safety);
+        set_share_table_v2(&mut vault.users_share_in_risky_vault, account, risky);
     }
 
     public entry fun close_position_user(_signer: &signer, _collateral_delta: u64, _leverage: u64) {

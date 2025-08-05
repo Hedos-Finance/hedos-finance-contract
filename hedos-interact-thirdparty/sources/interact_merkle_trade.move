@@ -23,14 +23,18 @@ module delta_hedging::interact_merkle_trade {
                 denominator += _leverage * 8;
             };
 
-            let new_collateral_delta_64 = (_collateral_delta as u256) * (numerator as u256) / (denominator as u256);
+            numerator = denominator - numerator;
+            let fee = (_collateral_delta as u256) * (numerator as u256) / (denominator as u256);
+            let new_collateral_delta_64 = (_collateral_delta as u256) - fee;
+
             let new_collateral_delta = new_collateral_delta_64 as u64;
 
             let _size_delta = new_collateral_delta * _leverage;
+
             if (_open) {
               (_size_delta, _collateral_delta)
             } else {
-                (_size_delta, new_collateral_delta)
+                (_collateral_delta * _leverage, _collateral_delta)
             }
 
         } else {
@@ -55,6 +59,7 @@ module delta_hedging::interact_merkle_trade {
         };
         
         let (size_delta, collateral_delta) = get_size_delta_and_collateral_delta_v2(_collateral_delta, _leverage, _open, maker, _pair);
+            
         if (_pair == utf8(b"APT_USD")) {
             if (!_is_long) {
                 if (_open) {
