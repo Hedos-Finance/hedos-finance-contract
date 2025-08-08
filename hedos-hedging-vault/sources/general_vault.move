@@ -289,9 +289,7 @@ module delta_hedging::general_vault {
     }
 
     #[view]
-    public fun get_lending_price(token: String): u64 acquires VaultRef {
-        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
-        let vault_address = vault_ref.vault_address;
+    public fun get_lending_price(token: String): u64 {
         if (token == string::utf8(b"USDC")) {
             (interact_aries::get_price<WrappedUSDC>() / 10000) as u64
         } else if (token == string::utf8(b"APT")) {
@@ -503,7 +501,7 @@ module delta_hedging::general_vault {
     }
 
     public entry fun transfer_from_reward_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, RewardPoolRef { 
-        only_admin(signer);
+        // only_admin(signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_address = vault_ref.vault_address;
 
@@ -511,6 +509,62 @@ module delta_hedging::general_vault {
         let reward_pool_signer = &object::generate_signer_for_extending(&reward_pool_ref.vault_extend_ref);
 
         transfer_usdc(reward_pool_signer, vault_address, amountUSDC);
+    }
+
+    #[view]
+    public fun get_reward_balance(): (u64, u64) acquires RewardPool, RewardPoolRef {
+        let reward_pool_address = borrow_global<RewardPoolRef>(DELTA_HEDGING).vault_address;
+        let reward_pool = borrow_global<RewardPool>(reward_pool_address);
+
+        (reward_pool.safety_balance, reward_pool.risky_balance)
+    }
+
+    public entry fun set_reward_balance(signer: &signer, safety: u64, risky: u64) acquires RewardPool, RewardPoolRef {
+        only_admin(signer);
+        
+        let reward_pool_address = borrow_global<RewardPoolRef>(DELTA_HEDGING).vault_address;
+        let reward_pool = borrow_global_mut<RewardPool>(reward_pool_address);
+
+        reward_pool.safety_balance = safety;
+        reward_pool.risky_balance = risky;
+    }
+
+    fun update_reward_balance(safety: u64, risky: u64, increase: bool) acquires RewardPool, RewardPoolRef {
+
+        let reward_pool_address = borrow_global<RewardPoolRef>(DELTA_HEDGING).vault_address;
+        let reward_pool = borrow_global_mut<RewardPool>(reward_pool_address);
+
+        if (increase) {
+            reward_pool.safety_balance += safety;
+            reward_pool.risky_balance += risky;
+        } else {
+            reward_pool.safety_balance -= safety;
+            reward_pool.risky_balance -= risky;
+        }
+    }
+
+    public entry fun update_reward_vault(_signer: &signer, safety: u64, risky: u64, increase: bool) acquires VaultRef, RewardPool, RewardPoolRef {
+        let (safety_balance, risky_balance) = get_reward_balance();
+        let reward_pool_address = borrow_global<RewardPoolRef>(DELTA_HEDGING).vault_address;
+        let reward_pool = borrow_global_mut<RewardPool>(reward_pool_address);
+
+        if (increase) {
+            deposit_to_reward_pool(_signer, safety + risky);
+            reward_pool.safety_balance += safety;
+            reward_pool.risky_balance += risky;
+        } else {
+            if (safety_balance < safety) {
+                safety = safety_balance;
+                update_current_deposited(safety - safety_balance, 0, false);
+            };
+            if (risky_balance < risky) {
+                risky = risky_balance;
+                update_current_deposited(0, risky - risky_balance, false);
+            };
+            transfer_from_reward_pool(_signer, safety + risky);
+            reward_pool.safety_balance -= safety;
+            reward_pool.risky_balance -= risky;
+        }
     }
 
     public entry fun init_admin_ref(signer: &signer) acquires AdminRef {
@@ -1585,6 +1639,10 @@ module delta_hedging::general_vault {
                     amountOut += amount_withdraw;
                     if (action == third_party::only_withdraw_id()) {
                         lending_withdraw_v2(signer, amount_withdraw, token_withdraw, is_official);
+                        
+                        if (token_withdraw == string::utf8(b"APT")) {
+                            cellana_swap_APT_to_USDC(signer, amount_withdraw);
+                        }
                     } else if (action == third_party::repay_withdraw_id()) {
                         amountIn += amount_repay;
                         lending_repay_and_withdraw_v2(signer, amount_repay, amount_withdraw, is_official);
@@ -1714,6 +1772,110 @@ module delta_hedging::general_vault {
             if( usdc_balance > amount && vector::length(&data) == 0)
                 amount_remain_transfer = amount
             else amount_remain_transfer = usdc_balance;
+            
+            if( amount_remain_transfer != 0 )
+            {   
+                let total_share = vault.total_share_of_risky_vault;
+                let user_share = (total_share * (amount_remain_transfer as u256)) / (total_value as u256);
+
+                update_share_table(&mut vault.users_share_in_risky_vault, account, user_share, false);
+
+                vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
+                vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
+                transfer_usdc(vault_signer, account, amount_remain_transfer);
+                update_current_deposited(0, amount_remain_transfer, false);
+            };
+        };
+        
+        if( vector::length(&data) != 0)
+            withdraw_risky_vault_v2(_signer, account, data);
+
+        emit(Withdrawn {
+            account,
+            amount: amount,
+            is_risky: true,
+        });
+    }
+
+    public entry fun withdraw_safety_user_v3(
+        _signer: &signer, 
+        account: address,
+        amount: u64,
+        total_value: u64,
+        close_all: bool,
+        from_reward: u64,
+        data: vector<u64>
+    ) acquires Vault, VaultRef, BackupVaultRef, AdminRef, RewardPool, RewardPoolRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let usdc_backup = get_usdc_balance(backup_vault_ref.vault_address);
+        transfer_usdc(&object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref), vault_ref.vault_address, usdc_backup);
+
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        if (!close_all) {         
+            let amount_remain_transfer;
+            if( usdc_balance + from_reward > amount && vector::length(&data) == 0)
+                amount_remain_transfer = amount
+            else amount_remain_transfer = usdc_balance + from_reward;
+
+            transfer_from_reward_pool(_signer, from_reward);
+            update_reward_balance(from_reward, 0, false);
+            
+            if( amount_remain_transfer != 0 )
+            {   
+                let total_share = vault.total_share_of_safety_vault;
+                let user_share = (total_share * (amount_remain_transfer as u256)) / (total_value as u256);
+
+                update_share_table(&mut vault.users_share_in_safety_vault, account, user_share, false);
+
+                vault.total_value_lock = safe_sub(vault.total_value_lock, amount_remain_transfer);
+                vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
+                transfer_usdc(vault_signer, account, amount_remain_transfer);
+                update_current_deposited(amount_remain_transfer, 0, false);
+            };
+        };
+        
+        if( vector::length(&data) != 0)
+            withdraw_safety_vault_v2(_signer, account, data);
+
+        emit(Withdrawn {
+            account,
+            amount: amount,
+            is_risky: false,
+        });
+    }
+
+    public entry fun withdraw_risky_user_v3(
+        _signer: &signer, 
+        account: address,
+        amount: u64,
+        total_value:  u64,
+        close_all: bool,
+        from_reward: u64,
+        data: vector<u64>
+    ) acquires Vault, VaultRef, BackupVaultRef, AdminRef, RewardPool, RewardPoolRef  {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+
+        let backup_vault_ref = borrow_global<BackupVaultRef>(DELTA_HEDGING);
+        let usdc_backup = get_usdc_balance(backup_vault_ref.vault_address);
+        transfer_usdc(&object::generate_signer_for_extending(&backup_vault_ref.vault_extend_ref), vault_ref.vault_address, usdc_backup);
+
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        if (!close_all) {          
+            let amount_remain_transfer;
+            if( usdc_balance + from_reward > amount && vector::length(&data) == 0)
+                amount_remain_transfer = amount
+            else amount_remain_transfer = usdc_balance + from_reward;
+
+            transfer_from_reward_pool(_signer, from_reward);
+            update_reward_balance(0, from_reward, false);
             
             if( amount_remain_transfer != 0 )
             {   
