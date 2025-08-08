@@ -1609,28 +1609,28 @@ module delta_hedging::general_vault {
             if (type == third_party::perp_id()) {
                 let (amount, leverage, is_long, market_skew) = third_party::get_perp_param(action);
                 if (is_open) {
-                    open_position_v2(signer, amount, leverage, is_long, market_skew, is_official);
+                    open_position(signer, amount, leverage, is_long, market_skew/*, is_official*/);
                     amountIn += amount;
                 } else {
-                    close_position_v2(signer, amount, leverage, is_long, market_skew, is_official);
+                    close_position(signer, amount, leverage, is_long, market_skew/*, is_official*/);
                     amountOut += amount;
                 };
             } else if (type == third_party::liquid_id()) {
                 let amount = third_party::get_liquid_param(action);
                 if (is_open) {
-                    liquid_staking_v2(signer, amount, is_official);
+                    liquid_staking(signer, amount, /*is_official*/);
                     amountIn += amount;
                 } else {
-                    liquid_staking_unstake_v2(signer, amount, is_official);
+                    liquid_staking_unstake(signer, amount, /*is_official*/);
                     amountOut += amount;
                 }
             } else if (type == third_party::lending_id()) {
                 let (amount_withdraw, token_withdraw, amount_repay, _token_repay, action) = third_party::get_lending_param(action);
                 if (is_open) {
                     if (action == third_party::only_withdraw_id()) {
-                        lending_deposit_v2(signer, amount_withdraw, token_withdraw, is_official);
+                        lending_deposit(signer, amount_withdraw, token_withdraw/*, is_official*/);
                     } else if (action == third_party::repay_withdraw_id()) {
-                        lending_deposit_and_borrow_v2(signer, amount_withdraw, amount_repay, is_official);
+                        lending_deposit_and_borrow(signer, amount_withdraw, amount_repay/*, is_official*/);
                     } else {
                         abort 1;
                     };
@@ -1638,14 +1638,14 @@ module delta_hedging::general_vault {
                 } else {
                     amountOut += amount_withdraw;
                     if (action == third_party::only_withdraw_id()) {
-                        lending_withdraw_v2(signer, amount_withdraw, token_withdraw, is_official);
+                        lending_withdraw(signer, amount_withdraw, token_withdraw/*, is_official*/);
                         
                         if (token_withdraw == string::utf8(b"APT")) {
                             cellana_swap_APT_to_USDC(signer, amount_withdraw);
                         }
                     } else if (action == third_party::repay_withdraw_id()) {
                         amountIn += amount_repay;
-                        lending_repay_and_withdraw_v2(signer, amount_repay, amount_withdraw, is_official);
+                        lending_repay_and_withdraw(signer, amount_repay, amount_withdraw/*, is_official*/);
                     } else {
                         abort 1;
                     };
