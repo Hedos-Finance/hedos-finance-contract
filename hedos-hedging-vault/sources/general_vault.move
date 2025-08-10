@@ -444,10 +444,12 @@ module delta_hedging::general_vault {
         reserve_pool_ref.vault_address
     }
 
-    public entry fun deposit_to_reserve_pool(signer: &signer, amountUSDC: u64) acquires ReservePoolRef {
+    public entry fun deposit_to_reserve_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, ReservePoolRef {
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
         let reserve_pool_ref = borrow_global<ReservePoolRef>(DELTA_HEDGING);
         let reserve_pool_address = reserve_pool_ref.vault_address;
-        transfer_usdc(signer, reserve_pool_address, amountUSDC);
+        transfer_usdc(vault_signer, reserve_pool_address, amountUSDC);
     }
 
     public entry fun transfer_from_reserve_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, ReservePoolRef { 
@@ -494,10 +496,12 @@ module delta_hedging::general_vault {
         reward_pool_ref.vault_address
     }
 
-    public entry fun deposit_to_reward_pool(signer: &signer, amountUSDC: u64) acquires RewardPoolRef {
+    public entry fun deposit_to_reward_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, RewardPoolRef {
         let reward_pool_ref = borrow_global<RewardPoolRef>(DELTA_HEDGING);
         let reward_pool_address = reward_pool_ref.vault_address;
-        transfer_usdc(signer, reward_pool_address, amountUSDC);
+        let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        transfer_usdc(vault_signer, reward_pool_address, amountUSDC);
     }
 
     public entry fun transfer_from_reward_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, RewardPoolRef { 
@@ -1150,6 +1154,7 @@ module delta_hedging::general_vault {
             interact_aries::withdraw_fa<WrappedUSDC>(vault_signer, amount, false);
         } else if (token == string::utf8(b"APT")) {
             interact_aries::withdraw<AptosCoin>(vault_signer, amount, false);
+            swap_APT_to_USDC(vault_signer, amount - 1);
         } else {
             abort 1;
         };
@@ -1285,7 +1290,7 @@ module delta_hedging::general_vault {
     }
 
     public entry fun cellana_swap_APT_to_USDC(_signer: &signer, amountAPT: u64) acquires VaultRef {
-        only_admin(_signer);
+        // only_admin(_signer);
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
 
@@ -1343,6 +1348,10 @@ module delta_hedging::general_vault {
         vault.total_share_of_safety_vault = safe_sub_u256(vault.total_share_of_safety_vault, user_share);
         vault.total_perpeptual = safe_sub(vault.total_perpeptual, amountClose);
 
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        if (amount_withdraw > usdc_balance) {
+            amount_withdraw = usdc_balance;
+        };
         transfer_usdc(vault_signer, account, amount_withdraw);
 
 
@@ -1370,6 +1379,10 @@ module delta_hedging::general_vault {
         vault.total_share_of_risky_vault = safe_sub_u256(vault.total_share_of_risky_vault, user_share);
         vault.total_perpeptual = safe_sub(vault.total_perpeptual, amountClose);
 
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        if (amount_withdraw > usdc_balance) {
+            amount_withdraw = usdc_balance;
+        };
         transfer_usdc(vault_signer, account, amount_withdraw);
 
         emit(Withdrawn {
@@ -1592,7 +1605,7 @@ module delta_hedging::general_vault {
     }
 
     fun execute_action_internal(signer: &signer, data: vector <u64>): (u64, u64) acquires Vault, VaultRef, BackupVaultRef {
-        only_admin(signer);
+        // only_admin(signer);
         
         let amountIn = 0;
         let amountOut = 0;
@@ -1639,10 +1652,9 @@ module delta_hedging::general_vault {
                     amountOut += amount_withdraw;
                     if (action == third_party::only_withdraw_id()) {
                         lending_withdraw(signer, amount_withdraw, token_withdraw/*, is_official*/);
-                        
-                        if (token_withdraw == string::utf8(b"APT")) {
-                            cellana_swap_APT_to_USDC(signer, amount_withdraw);
-                        }
+                        // if (token_withdraw == string::utf8(b"APT")) {
+                        //     cellana_swap_APT_to_USDC(signer, amount_withdraw);
+                        // };
                     } else if (action == third_party::repay_withdraw_id()) {
                         amountIn += amount_repay;
                         lending_repay_and_withdraw(signer, amount_repay, amount_withdraw/*, is_official*/);
@@ -1805,7 +1817,7 @@ module delta_hedging::general_vault {
         close_all: bool,
         from_reward: u64,
         data: vector<u64>
-    ) acquires Vault, VaultRef, BackupVaultRef, AdminRef, RewardPool, RewardPoolRef {
+    ) acquires Vault, VaultRef, BackupVaultRef, RewardPool, RewardPoolRef {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
@@ -1839,8 +1851,9 @@ module delta_hedging::general_vault {
             };
         };
         
-        if( vector::length(&data) != 0)
-            withdraw_safety_vault_v2(_signer, account, data);
+        if( vector::length(&data) != 0) {
+            let (_, _) = execute_action_internal(_signer, data);
+        };
 
         emit(Withdrawn {
             account,
@@ -1857,7 +1870,7 @@ module delta_hedging::general_vault {
         close_all: bool,
         from_reward: u64,
         data: vector<u64>
-    ) acquires Vault, VaultRef, BackupVaultRef, AdminRef, RewardPool, RewardPoolRef  {
+    ) acquires Vault, VaultRef, BackupVaultRef, RewardPool, RewardPoolRef  {
         let vault_ref = borrow_global<VaultRef>(DELTA_HEDGING);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
@@ -1891,8 +1904,9 @@ module delta_hedging::general_vault {
             };
         };
         
-        if( vector::length(&data) != 0)
-            withdraw_risky_vault_v2(_signer, account, data);
+        if( vector::length(&data) != 0) {
+            let (_, _) = execute_action_internal(_signer, data);
+        };
 
         emit(Withdrawn {
             account,
