@@ -5,6 +5,8 @@ module hedos::general_vault {
 
     use hedos::token::{transfer_usdc};
     
+    use hedos::shares_token;
+
     use std::signer::{Self};
 
     use hedos::white_list::{only_admin};
@@ -32,6 +34,22 @@ module hedos::general_vault {
     struct AdminRef has key {
         admin_address: address,
         admin_extend_ref: ExtendRef,
+    }
+
+    struct ReservePool has key {
+    }
+    struct ReservePoolRef has key {
+        vault_address: address,
+        vault_extend_ref: ExtendRef,
+    }
+
+    struct RewardPool has key {
+        risky_balance: u64,
+        safety_balance: u64
+    }
+    struct RewardPoolRef has key {
+        vault_address: address,
+        vault_extend_ref: ExtendRef,
     }
 
     #[event]
@@ -66,25 +84,16 @@ module hedos::general_vault {
             total_deposited_safety: 0
         };
         move_to(vault_signer, new_vault);  
-        
-        // let backup_constructor_ref = &object::create_object(HEDOS);
-        // let backup_vault_signer = &object::generate_signer(backup_constructor_ref);
-        // let backup_extend_ref = object::generate_extend_ref(backup_constructor_ref);
-        // let backup_new_vault_address = signer::address_of(backup_vault_signer); 
 
         if (!exists<VaultRef>(HEDOS)) {
             move_to(signer, VaultRef {
                 vault_address: new_vault_address,
                 vault_extend_ref: extend_ref,
-                // backup_vault_address: backup_new_vault_address,
-                // backup_vault_extend_ref: backup_extend_ref,
             })
         } else {
             let vault_ref = borrow_global_mut<VaultRef>(HEDOS);
             vault_ref.vault_address = new_vault_address;
             vault_ref.vault_extend_ref = extend_ref;
-            // vault_ref.backup_vault_address = backup_new_vault_address;
-            // vault_ref.backup_vault_extend_ref = backup_extend_ref;
         };
 
         emit(CreateNewVault {
@@ -118,15 +127,17 @@ module hedos::general_vault {
         vault.total_deposited_risky = risky;
     }
 
-    public fun update_current_deposited(safety: u64, risky: u64, increase: bool) acquires Vault, VaultRef {
+    public fun update_current_deposited(_safety: u64, _risky: u64, _increase: bool){
+    }
+
+    fun update_current_deposited_internal(safety: u64, risky: u64, increase: bool) acquires Vault, VaultRef {
         let vault_ref = borrow_global<VaultRef>(HEDOS);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
         if(increase)
         {   
             vault.total_deposited_safety += safety;
             vault.total_deposited_risky += risky;
-        }
-        else{
+        } else{
             vault.total_deposited_safety = if (vault.total_deposited_safety >= safety) {
                 vault.total_deposited_safety - safety
             } else 0;
@@ -151,6 +162,170 @@ module hedos::general_vault {
     }
     // =============================
 
+
+    // Reserve Pool
+    public entry fun init_reserve_pool(signer: &signer) acquires ReservePoolRef {
+        only_admin(signer);
+        let constructor_ref = &object::create_object(HEDOS);
+        let vault_signer = &object::generate_signer(constructor_ref);
+        let extend_ref = object::generate_extend_ref(constructor_ref);
+        let new_vault_address = signer::address_of(vault_signer);
+
+        let new_vault = ReservePool {};
+
+        move_to(vault_signer, new_vault);   
+
+        if (!exists<ReservePoolRef>(HEDOS)) {
+            move_to(signer, ReservePoolRef {
+                vault_address: new_vault_address,
+                vault_extend_ref: extend_ref,
+            })
+        } else {
+            let vault_ref = borrow_global_mut<ReservePoolRef>(HEDOS);
+            vault_ref.vault_address = new_vault_address;
+            vault_ref.vault_extend_ref = extend_ref;
+        };
+    }
+
+    #[view]
+    public fun get_reserve_pool_address(): address acquires ReservePoolRef {
+        let reserve_pool_ref = borrow_global<ReservePoolRef>(HEDOS);
+        reserve_pool_ref.vault_address
+    }
+
+    public entry fun deposit_to_reserve_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, ReservePoolRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let reserve_pool_ref = borrow_global<ReservePoolRef>(HEDOS);
+        let reserve_pool_address = reserve_pool_ref.vault_address;
+        transfer_usdc(vault_signer, reserve_pool_address, amountUSDC);
+    }
+
+    public entry fun transfer_from_reserve_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, ReservePoolRef { 
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault_address = vault_ref.vault_address;
+
+        let reserve_pool_ref = borrow_global<ReservePoolRef>(HEDOS);
+        let reserve_pool_signer = &object::generate_signer_for_extending(&reserve_pool_ref.vault_extend_ref);
+
+        transfer_usdc(reserve_pool_signer, vault_address, amountUSDC);
+    }
+    // =============================
+
+
+    // Reward Pool
+    public entry fun init_reward_pool(signer: &signer) acquires RewardPoolRef {
+        only_admin(signer);
+        let constructor_ref = &object::create_object(HEDOS);
+        let vault_signer = &object::generate_signer(constructor_ref);
+        let extend_ref = object::generate_extend_ref(constructor_ref);
+        let new_vault_address = signer::address_of(vault_signer);
+
+        let new_vault = RewardPool {
+            risky_balance: 0,
+            safety_balance: 0
+        };
+
+        move_to(vault_signer, new_vault);   
+
+
+        if (!exists<RewardPoolRef>(HEDOS)) {
+            move_to(signer, RewardPoolRef {
+                vault_address: new_vault_address,
+                vault_extend_ref: extend_ref,
+            })
+        } else {
+            let vault_ref = borrow_global_mut<RewardPoolRef>(HEDOS);
+            vault_ref.vault_address = new_vault_address;
+            vault_ref.vault_extend_ref = extend_ref;
+        };
+    }
+
+    #[view]
+    public fun get_reward_pool_address(): address acquires RewardPoolRef {
+        let reward_pool_ref = borrow_global<RewardPoolRef>(HEDOS);
+        reward_pool_ref.vault_address
+    }
+
+    public entry fun deposit_to_reward_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, RewardPoolRef {
+        only_admin(signer);
+        let reward_pool_ref = borrow_global<RewardPoolRef>(HEDOS);
+        let reward_pool_address = reward_pool_ref.vault_address;
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        transfer_usdc(vault_signer, reward_pool_address, amountUSDC);
+    }
+
+    public entry fun transfer_from_reward_pool(signer: &signer, amountUSDC: u64) acquires VaultRef, RewardPoolRef { 
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault_address = vault_ref.vault_address;
+
+        let reward_pool_ref = borrow_global<RewardPoolRef>(HEDOS);
+        let reward_pool_signer = &object::generate_signer_for_extending(&reward_pool_ref.vault_extend_ref);
+
+        transfer_usdc(reward_pool_signer, vault_address, amountUSDC);
+    }
+
+    #[view]
+    public fun get_reward_balance(): (u64, u64) acquires RewardPool, RewardPoolRef {
+        let reward_pool_address = borrow_global<RewardPoolRef>(HEDOS).vault_address;
+        let reward_pool = borrow_global<RewardPool>(reward_pool_address);
+
+        (reward_pool.safety_balance, reward_pool.risky_balance)
+    }
+
+    public entry fun set_reward_balance(signer: &signer, safety: u64, risky: u64) acquires RewardPool, RewardPoolRef {
+        only_admin(signer);
+        
+        let reward_pool_address = borrow_global<RewardPoolRef>(HEDOS).vault_address;
+        let reward_pool = borrow_global_mut<RewardPool>(reward_pool_address);
+
+        reward_pool.safety_balance = safety;
+        reward_pool.risky_balance = risky;
+    }
+
+    // fun update_reward_balance(safety: u64, risky: u64, increase: bool) acquires RewardPool, RewardPoolRef {
+
+    //     let reward_pool_address = borrow_global<RewardPoolRef>(HEDOS).vault_address;
+    //     let reward_pool = borrow_global_mut<RewardPool>(reward_pool_address);
+
+    //     if (increase) {
+    //         reward_pool.safety_balance += safety;
+    //         reward_pool.risky_balance += risky;
+    //     } else {
+    //         reward_pool.safety_balance -= safety;
+    //         reward_pool.risky_balance -= risky;
+    //     }
+    // }
+
+    public entry fun update_reward_vault(_signer: &signer, safety: u64, risky: u64, increase: bool) acquires Vault, VaultRef, RewardPool, RewardPoolRef {
+        only_admin(_signer);
+        let (safety_balance, risky_balance) = get_reward_balance();
+        let reward_pool_address = borrow_global<RewardPoolRef>(HEDOS).vault_address;
+        let reward_pool = borrow_global_mut<RewardPool>(reward_pool_address);
+
+        if (increase) {
+            deposit_to_reward_pool(_signer, safety + risky);
+            reward_pool.safety_balance += safety;
+            reward_pool.risky_balance += risky;
+        } else {
+            if (safety_balance < safety) {
+                safety = safety_balance;
+                update_current_deposited_internal(safety - safety_balance, 0, false);
+            };
+            if (risky_balance < risky) {
+                risky = risky_balance;
+                update_current_deposited_internal(0, risky - risky_balance, false);
+            };
+            transfer_from_reward_pool(_signer, safety + risky);
+            reward_pool.safety_balance -= safety;
+            reward_pool.risky_balance -= risky;
+        }
+    }
+    // =============================
 
     // Interact Address
     #[view]
@@ -212,7 +387,10 @@ module hedos::general_vault {
 
 
     // User Actions
-    public entry fun deposit_risky_vault(signer: &signer, amount: u64) acquires Vault, VaultRef {
+    public entry fun deposit_risky_vault(
+        signer: &signer, 
+        amount: u64
+    ) acquires Vault, VaultRef {
         let vault_ref = borrow_global<VaultRef>(HEDOS);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
@@ -230,7 +408,10 @@ module hedos::general_vault {
         });
     }
 
-    public entry fun deposit_safety_vault(signer: &signer, amount: u64) acquires Vault, VaultRef {
+    public entry fun deposit_safety_vault(
+        signer: &signer, 
+        amount: u64
+    ) acquires Vault, VaultRef {
         let vault_ref = borrow_global<VaultRef>(HEDOS);
         let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
 
@@ -248,21 +429,107 @@ module hedos::general_vault {
         });
     }
 
-    public entry fun withdraw_risky_vault(signer: &signer, amount: u64) {
+    public entry fun mint_risky(
+        admin: &signer,
+        account: address,
+        amount: u64,
+        total_value: u64
+    ) {
+        only_admin(admin);
+
+        let user_share: u128;
+        let total_share = shares_token::get_total_risky_supply();
+
+        if(total_share == 0) {
+            user_share = (amount as u128) * 1_000_000;
+        } else user_share = (total_share * (amount as u128)) / (total_value as u128);
+
+        shares_token::mint_risky(admin, account, user_share as u64);
+    }
+
+    public entry fun mint_safety(
+        admin: &signer,
+        account: address,
+        amount: u64,
+        total_value: u64
+    ) {
+        only_admin(admin);
+
+        let user_share: u128;
+        let total_share = shares_token::get_total_safety_supply();
+
+        if(total_share == 0) {
+            user_share = (amount as u128) * 1_000_000;
+        } else user_share = (total_share * (amount as u128)) / (total_value as u128);
+
+        shares_token::mint_safety(admin, account, user_share as u64);
+    }
+
+    public entry fun withdraw_risky_vault(
+        signer: &signer, 
+        shares: u64
+    ) acquires VaultRef {
         let account = signer::address_of(signer);
+        
+        shares_token::transfer_risky(signer, get_vault_address(), shares);
+
         emit(Withdraw {
             account,
-            amount,
+            amount: shares,
             is_risky: true,
         });
     }
 
-    public entry fun withdraw_safety_vault(signer: &signer, amount: u64) {
+    public entry fun withdraw_safety_vault(
+        signer: &signer, 
+        shares: u64
+    ) acquires VaultRef {
         let account = signer::address_of(signer);
+        
+        shares_token::transfer_safety(signer, get_vault_address(), shares);
+
         emit(Withdraw {
             account,
-            amount,
+            amount: shares,
             is_risky: false,
         });
+    }
+
+    public entry fun burn_risky(
+        admin: &signer,
+        account: address,
+        amount: u64,
+        shares: u64
+    ) acquires Vault, VaultRef {
+        only_admin(admin);
+
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        vault.total_value_lock -= amount;
+        vault.total_deposited_risky -= amount;
+
+        shares_token::burn_risky(admin, get_vault_address(), shares);
+        transfer_usdc(vault_signer, account, amount);
+    }
+
+    public entry fun burn_safety(
+        admin: &signer,
+        account: address,
+        amount: u64,
+        shares: u64
+    ) acquires Vault, VaultRef {
+        only_admin(admin);
+
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault = borrow_global_mut<Vault>(vault_ref.vault_address);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        vault.total_value_lock -= amount;
+        vault.total_deposited_safety -= amount;
+
+        shares_token::burn_safety(admin, get_vault_address(), shares);
+        transfer_usdc(vault_signer, account, amount);
     }
 }

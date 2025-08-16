@@ -1,10 +1,11 @@
 [package]
-name = "hedos-router-vault"
+name = "hedos-token"
 version = "1.0.0"
 authors = []
 
 [addresses]
 hedos                   = "0x005cb1912b90a282682ab49dc86d3379b75e4bb8094ecc4637f44d19c80ddd71"
+
 
 [dev-addresses]
 
@@ -17,4 +18,3 @@ subdir = "aptos-framework"
 
 [dependencies]
 hedos-utils = { local = "../hedos-utils" }
-hedos-token = { local = "../hedos-token" }
