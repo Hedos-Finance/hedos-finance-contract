@@ -1,10 +1,10 @@
 [package]
-name = "hedos-whitelist"
+name = "hedos-router-vault"
 version = "1.0.0"
 authors = []
 
 [addresses]
-hedos                   = "0xb9043885f5adaecebb0cd03716cd22fc364f375cd58c6f5729ad21158a8de25a"
+hedos                   = "0x005cb1912b90a282682ab49dc86d3379b75e4bb8094ecc4637f44d19c80ddd71"
 
 [dev-addresses]
 
@@ -14,3 +14,6 @@ rev = "mainnet"
 subdir = "aptos-framework"
 
 [dev-dependencies]
+
+[dependencies]
+hedos-utils = { local = "../hedos-utils" }

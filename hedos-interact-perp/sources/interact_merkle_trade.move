@@ -19,8 +19,7 @@ module hedos::interact_merkle_trade {
             let denominator = 10_000;
             if (_is_maker) {
                 denominator += _leverage * 4;
-            }
-            else {
+            } else {
                 denominator += _leverage * 8;
             };
 
@@ -30,10 +29,11 @@ module hedos::interact_merkle_trade {
             let new_collateral_delta = new_collateral_delta_64 as u64;
 
             let _size_delta = new_collateral_delta * _leverage;
+            
             if (_open) {
               (_size_delta, _collateral_delta)
             } else {
-                (_size_delta, new_collateral_delta)
+                (_collateral_delta * _leverage, _collateral_delta)
             }
 
         } else {
@@ -42,7 +42,38 @@ module hedos::interact_merkle_trade {
         }
     }
 
-    public entry fun simple_trade(
+    public entry fun simple_trade_by_size(
+        _signer: &signer,
+        _user_address: address,
+        _collateral_delta: u64,
+        _size_delta: u64,
+        _is_long: bool,
+        _open: bool,
+        _market_skew: bool,
+        _pair: String
+    ) {
+        if (_pair == utf8(b"APT_USD")) {
+            if (!_is_long) {
+                if (_open) {
+                    open_short_order<APT_USD, W_USDC>(_signer, _user_address, _size_delta, _collateral_delta);
+                } else {
+                    close_short_order<APT_USD, W_USDC>(_signer, _user_address, _size_delta, _collateral_delta);
+                }
+            } else {
+                if (_open) {
+                    open_long_order<APT_USD, W_USDC>(_signer, _user_address, _size_delta, _collateral_delta);
+                } else {
+                    close_long_order<APT_USD, W_USDC>(_signer, _user_address, _size_delta, _collateral_delta);
+                }
+            }
+        }
+        else {
+            abort 1;
+        };
+
+    }
+
+    public entry fun simple_trade_by_leverage(
         _signer: &signer,
         _user_address: address,
         _collateral_delta: u64,
@@ -50,32 +81,24 @@ module hedos::interact_merkle_trade {
         _is_long: bool,
         _open: bool,
         _market_skew: bool,
-        _pair: String,
+        _pair: String
     ) {
         let maker = _market_skew;
-        if (_is_long) {
+        if (!_is_long) {
             maker = !maker;
         };
         
         let (size_delta, collateral_delta) = get_size_delta_and_collateral_delta(_collateral_delta, _leverage, _open, maker, _pair);
-        if (_pair == utf8(b"APT_USD")) {
-            if (!_is_long) {
-                if (_open) {
-                    open_short_order<APT_USD, W_USDC>(_signer, _user_address, size_delta, collateral_delta);
-                } else {
-                    close_short_order<APT_USD, W_USDC>(_signer, _user_address, size_delta, collateral_delta);
-                }
-            } else {
-                if (_open) {
-                    open_long_order<APT_USD, W_USDC>(_signer, _user_address, size_delta, collateral_delta);
-                } else {
-                    close_long_order<APT_USD, W_USDC>(_signer, _user_address, size_delta, collateral_delta);
-                }
-            }
-        }
-        else {
-            abort 1;
-        };
+        simple_trade_by_size(
+            _signer,
+            _user_address,
+            collateral_delta,
+            size_delta,
+            _is_long,
+            _open,
+            _market_skew,
+            _pair
+        );
     }
     
     public entry fun open_short_order<PairType, CollateralType> (

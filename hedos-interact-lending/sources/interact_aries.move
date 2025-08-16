@@ -113,22 +113,22 @@ module hedos::interact_aries {
     }
 
     // can use with only pair <USDC/APT>
-    public fun deposit_and_borrow<Coin0, Coin1>(
-        _owner_signer: &signer,
-        input_amount: u64,
-        collateral_want: u64
-    ): (u64, u64) {
+    // public fun deposit_and_borrow<Coin0, Coin1>(
+    //     _owner_signer: &signer,
+    //     input_amount: u64,
+    //     collateral_want: u64
+    // ): (u64, u64) {
 
-        let coin0_price = get_price<Coin0>();
-        let coin1_price = get_price<Coin1>() * 10000;
+    //     let coin0_price = get_price<Coin0>();
+    //     let coin1_price = get_price<Coin1>() * 10000;
 
-        let borrow_amount = (input_amount as u128) 
-                            * (coin0_price as u128) 
-                            * (collateral_want as u128) 
-                            / (coin1_price as u128);
+    //     let borrow_amount = (input_amount as u128) 
+    //                         * (coin0_price as u128) 
+    //                         * (collateral_want as u128) 
+    //                         / (coin1_price as u128);
 
-        (input_amount, borrow_amount as u64)
-    }
+    //     (input_amount, borrow_amount as u64)
+    // }
 
     public entry fun deposit_and_borrow_rate<Coin0, Coin1>(
         owner_signer: &signer,

@@ -4,7 +4,7 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-hedos                   = "0xb9043885f5adaecebb0cd03716cd22fc364f375cd58c6f5729ad21158a8de25a"
+hedos                   = "0x005cb1912b90a282682ab49dc86d3379b75e4bb8094ecc4637f44d19c80ddd71"
 merkle                  = "0x5ae6789dd2fec1a9ec9cccfb3acaf12e93d432f0a3a42c92fe1a9d490b7bbc06"
 
 [dev-addresses]
@@ -19,3 +19,4 @@ subdir = "aptos-framework"
 [dependencies]
 merkle              = { local = "../deps/merkle" }
 merkle-common       = { local = "../deps/merkle-common" }
+hedos-router-vault  = { local = "../hedos-router-vault" }

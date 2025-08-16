@@ -4,7 +4,7 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-hedos                   = "0xb9043885f5adaecebb0cd03716cd22fc364f375cd58c6f5729ad21158a8de25a"
+hedos                   = "0x005cb1912b90a282682ab49dc86d3379b75e4bb8094ecc4637f44d19c80ddd71"
 aptos_framework         = "0x1"
 USDC                    = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
 amnis                   = "0x111ae3e5bc816a5e63c2da97d0aa3886519e0cd5e4b046659fa35796bd11542a"

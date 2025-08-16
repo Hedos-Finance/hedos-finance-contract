@@ -4,7 +4,7 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-hedos                   = "0xb9043885f5adaecebb0cd03716cd22fc364f375cd58c6f5729ad21158a8de25a"
+hedos                   = "0x005cb1912b90a282682ab49dc86d3379b75e4bb8094ecc4637f44d19c80ddd71"
 wrapped_coins           = "0x9770fa9c725cbd97eb50b2be5f7416efdfd1f1554beb0750d4dae4c64e860da3"
 
 [dev-addresses]
@@ -23,3 +23,4 @@ Decimal             = { local = "../deps/Decimal" }
 hedos-interact-swap = { local = "../hedos-interact-swap" }
 WrappedCoins        = { local = "../deps/WrappedCoins" }
 hedos-utils         = { local = "../hedos-utils" }
+hedos-router-vault  = { local = "../hedos-router-vault" }
