@@ -14,11 +14,11 @@ const APTOS_NETWORK: Network = NetworkToNetworkName[Network.MAINNET];
 const config = new AptosConfig({ network: APTOS_NETWORK });
 const aptos = new Aptos(config);
 
-const OWNER_PRIVATE_KEY = process.env.PRIVATE_KEY as HexInput;
+const OWNER_PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 const getSigner = async () => {
   const privateKey = new Ed25519PrivateKey(OWNER_PRIVATE_KEY);
-  const signer = Account.fromPrivateKey({ privateKey }); // ✅ correct usage
+  const signer = Account.fromPrivateKey({ privateKey });
   return signer;
 };
 

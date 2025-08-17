@@ -328,6 +328,29 @@ module hedos::general_vault {
     // =============================
 
     // Interact Address
+
+    public entry fun init_interact_address(
+        signer: &signer,
+        lending: address,
+        liquid: address,
+        perp: address
+    ) acquires InteractAdress {
+        only_admin(signer);
+
+        if (!exists<InteractAdress>(HEDOS)) {
+            move_to(signer, InteractAdress {
+                lending_vault: lending,
+                staking_vault: liquid,
+                perp_vault: perp,
+            });
+        } else {
+            let storage = borrow_global_mut<InteractAdress>(HEDOS);
+            storage.lending_vault = lending;
+            storage.staking_vault = liquid;
+            storage.perp_vault = perp;
+        };
+    }
+
     #[view]
     public fun get_lending_vault_address(): address acquires InteractAdress {
         let storage = borrow_global<InteractAdress>(HEDOS);
