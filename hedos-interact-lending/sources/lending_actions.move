@@ -1,5 +1,5 @@
 module hedos::lending_actions {
-    use hedos::interact_aries::{register_user, deposit, deposit_fa, withdraw, withdraw_fa, repay, total_loaning, total_lending, get_borrow_amount};
+    use hedos::interact_aries::{get_price, register_user, deposit, deposit_fa, withdraw, withdraw_fa, repay, total_loaning, total_lending, get_borrow_amount};
     use hedos::interact_hyperion::{hyperion_swap_X_To_Y, get_amount_in};
     use hedos::token::{get_apt_balance, get_usdc_balance, transfer_usdc};
     use hedos::white_list::{only_admin};
@@ -76,6 +76,23 @@ module hedos::lending_actions {
         }
     }
 
+    #[view]
+    public fun get_lending_price(
+        token: String, 
+        protocol: String
+    ): u64 {
+        if (protocol == aries()) {
+            if (token == usdc()) {
+                (get_price<WrappedUSDC>() / 10000) as u64
+            } else if (token == apt()) {
+                (get_price<AptosCoin>() / 100) as u64
+            } else {
+                abort 1
+            }
+        } else {
+            abort 1
+        }
+    }
 
     #[view]
     public fun aries(): String {
