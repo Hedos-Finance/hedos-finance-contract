@@ -79,6 +79,18 @@ module hedos::shares_token {
     }
 
     #[view]
+    public fun get_user_shares(
+        from: address
+    ): (u64, u64) acquires SharesTokenAddress {
+        let (safety_address, risky_address) = get_shares_token_address();
+        
+        (
+            balance(safety_address, from),
+            balance(risky_address, from)
+        )
+    }
+
+    #[view]
     public fun get_shares_token_address(): (address, address) acquires SharesTokenAddress {
         let add = borrow_global<SharesTokenAddress>(HEDOS);
         (add.safety_address, add.risky_address)
