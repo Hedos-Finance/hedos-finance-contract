@@ -1,4 +1,3 @@
-
 module merkle::fa_box {
 
     struct W_USDC {
