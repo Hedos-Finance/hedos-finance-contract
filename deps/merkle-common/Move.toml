@@ -1,6 +1,7 @@
 [package]
 name = 'merkle-common'
-version = '1.0.0'
+version = '0.0.1'
+
 published-at = "0x5ae6789dd2fec1a9ec9cccfb3acaf12e93d432f0a3a42c92fe1a9d490b7bbc06"
 
 [addresses]
