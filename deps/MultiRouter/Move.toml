@@ -1,6 +1,7 @@
 [package]
 name = "MultiRouter"
-version = "1.0.0"
+version = "0.0.1"
+
 published-at = "0x9dd974aea0f927ead664b9e1c295e4215bd441a9fb4e53e5ea0bf22f356c8a2b"
 
 [addresses]
