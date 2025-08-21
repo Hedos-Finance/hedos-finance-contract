@@ -3,7 +3,7 @@ module hedos::liquid_actions {
     use aptos_framework::event::{emit};
 
     use hedos::token::{get_apt_balance, get_amAPT_balance, get_stAPT_balance, transfer_usdc, get_usdc_balance};
-    use hedos::interact_hyperion::{hyperion_swap_X_To_Y, get_amount_in};
+    use hedos::interact_hyperion::{hyperion_swap_X_To_Y, get_amount_in, get_X_to_Y_out};
     use hedos::interact_amnis::{stake, unstake_amAPT, price_stAPT};
     use hedos::white_list::{only_admin};
 
@@ -57,6 +57,64 @@ module hedos::liquid_actions {
     #[view]
     public fun btc(): String {
         utf8(b"BTC")
+    }
+
+    #[view]
+    public fun get_total_staked(
+        token: String,
+        protocol: String,
+        token_out: String        
+    ): u64 acquires LiquidVaultRef {
+        let vault_ref = borrow_global<LiquidVaultRef>(HEDOS);
+        if (protocol == amnis() && token == apt()) {
+            let amount_stAPT = get_stAPT_balance(vault_ref.vault_address);
+
+            let amount_balance_amAPT = get_amAPT_balance(vault_ref.vault_address);
+            let amount_amAPT = ( (price_stAPT() as u128) * (amount_stAPT as u128) / (PRECISION as u128) ) as u64;
+            let amount_amAPT_all = amount_amAPT + amount_balance_amAPT;
+            let amount_usdc = get_X_to_Y_out(amount_amAPT_all, AMAPT_CHOOSEN, USDC_CHOOSEN);
+
+            if (token_out == usdc()) {
+                amount_usdc
+            } else if (token_out == apt()) {
+                amount_amAPT_all
+            } else {
+                abort 1;
+                0
+            }
+        } else {
+            abort 1;
+            0
+        }
+    }
+
+    #[view]
+    public fun get_total_staked_slow(
+        token: String,
+        protocol: String,
+        token_out: String        
+    ): u64 acquires LiquidVaultRef {
+        let vault_ref = borrow_global<LiquidVaultRef>(HEDOS);
+        if (protocol == amnis() && token == apt()) {
+            let amount_stAPT = get_stAPT_balance(vault_ref.vault_address);
+
+            let amount_balance_amAPT = get_amAPT_balance(vault_ref.vault_address);
+            let amount_amAPT = ( (price_stAPT() as u128) * (amount_stAPT as u128) / (PRECISION as u128) ) as u64;
+            let amount_amAPT_all = amount_amAPT + amount_balance_amAPT;
+            let amount_usdc = get_X_to_Y_out(amount_amAPT_all, APT_CHOOSEN, USDC_CHOOSEN);
+
+            if (token_out == usdc()) {
+                amount_usdc
+            } else if (token_out == apt()) {
+                amount_amAPT_all
+            } else {
+                abort 1;
+                0
+            }
+        } else {
+            abort 1;
+            0
+        }
     }
 
     public entry fun init_vault(signer: &signer) acquires LiquidVaultRef {

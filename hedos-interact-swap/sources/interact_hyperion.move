@@ -15,15 +15,21 @@ module hedos::interact_hyperion {
     const LZ_USDT_ADDRESS:  address = @hyper_fungible_lzUSDT;
     const USDT_ADDRESS:     address = @hyper_fungible_USDT;
     const USDC_ADDRESS:     address = @hyper_fungible_USDC;
+    const WBTC_ADDRESS:     address = @hyper_fungible_WBTC;
+    const XBTC_ADDRESS:     address = @hyper_fungible_XBTC;
 
     const APT_USDT_LP_ADR: address = @hyper_fungible_APT_USDT_LP;
     const USDT_USDC_LP_ADR: address = @hyper_fungible_USDT_USDC_LP;
     const AMAPT_APT_LP_ADR: address = @hyper_fungible_AMAPT_APT_LP;
     const APT_USDC_LP_ADR:  address = @hyper_fungible_APT_USDC_LP;
+    const USDC_XBTC_LP_ADR: address = @hyper_fungible_USDC_XBTC_LP;
+    const USDC_WBTC_LP_ADR: address = @hyper_fungible_USDC_WBTC_LP;
 
     const USDC_CHOOSEN: u8 = 1;
     const APT_CHOOSEN: u8 = 2;
     const AMAPT_CHOOSEN: u8 = 3;
+    const XBTC_CHOOSEN: u8 = 4;
+    const WBTC_CHOOSEN: u8 = 5;
     
     use amnis::amapt_token::AmnisApt;
 
@@ -34,14 +40,24 @@ module hedos::interact_hyperion {
         
         if (coin_from == USDC_CHOOSEN) {
             x = object::address_to_object<Metadata>(USDC_ADDRESS);
-            y = object::address_to_object<Metadata>(APT_ADDRESS);
+            if (coin_to == APT_CHOOSEN || coin_to == AMAPT_CHOOSEN) {                
+                y = object::address_to_object<Metadata>(APT_ADDRESS);
 
-            coins.push_back(APT_USDC_LP_ADR);
+                coins.push_back(APT_USDC_LP_ADR);
 
-            if (coin_to == AMAPT_CHOOSEN) {
-                y = object::address_to_object<Metadata>(AMAPT_ADDRESS);
+                if (coin_to == AMAPT_CHOOSEN) {
+                    y = object::address_to_object<Metadata>(AMAPT_ADDRESS);
 
-                coins.push_back(AMAPT_APT_LP_ADR);
+                    coins.push_back(AMAPT_APT_LP_ADR);
+                };
+            } else if (coin_to == XBTC_CHOOSEN) {
+                y = object::address_to_object<Metadata>(XBTC_ADDRESS);
+                coins.push_back(USDC_XBTC_LP_ADR);
+            } else if (coin_to == WBTC_CHOOSEN) {
+                y = object::address_to_object<Metadata>(WBTC_ADDRESS);
+                coins.push_back(USDC_WBTC_LP_ADR);
+            } else {
+                abort 1;
             };
         } else if (coin_from == APT_CHOOSEN) {
             x = object::address_to_object<Metadata>(APT_ADDRESS);
@@ -53,7 +69,7 @@ module hedos::interact_hyperion {
                 y = object::address_to_object<Metadata>(AMAPT_ADDRESS);
                 coins.push_back(AMAPT_APT_LP_ADR);
             };
-        } else {
+        } else if (coin_from == AMAPT_CHOOSEN) {
             x = object::address_to_object<Metadata>(AMAPT_ADDRESS);
             y = object::address_to_object<Metadata>(APT_ADDRESS);
 
@@ -63,6 +79,16 @@ module hedos::interact_hyperion {
                 y = object::address_to_object<Metadata>(USDC_ADDRESS);
                 coins.push_back(APT_USDC_LP_ADR);
             };
+        } else if (coin_from == XBTC_CHOOSEN) {
+            x = object::address_to_object<Metadata>(XBTC_ADDRESS);
+            y = object::address_to_object<Metadata>(USDC_ADDRESS);
+            coins.push_back(USDC_XBTC_LP_ADR);
+        } else if (coin_from == WBTC_CHOOSEN) {
+            x = object::address_to_object<Metadata>(WBTC_ADDRESS);
+            y = object::address_to_object<Metadata>(USDC_ADDRESS);
+            coins.push_back(USDC_WBTC_LP_ADR);
+        } else {
+            abort 1;
         };
 
         (coins, x, y)
@@ -74,23 +100,19 @@ module hedos::interact_hyperion {
         coin_from: u8,
         coin_to: u8
     ) {
-        let apt = object::address_to_object<Metadata>(APT_ADDRESS);
-        let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+        let (coins, x, y) = get_data(coin_from, coin_to);
+        let amount_out_min = get_X_to_Y_out(amount, coin_from, coin_to);
 
-        if (coin_from == USDC_CHOOSEN) {
-            let amount_out_min = get_X_to_Y_out(amount, USDC_CHOOSEN, APT_CHOOSEN);
+        if (coin_from == USDC_CHOOSEN || coin_from == XBTC_CHOOSEN || coin_from == WBTC_CHOOSEN) {
             router_v3::swap_batch_directly_deposit(
                 owner_signer,
-                vector[APT_USDC_LP_ADR],
-                usdc,
-                apt,
+                coins,
+                x,
+                y,
                 amount,
                 amount_out_min
             );
         } else if (coin_from == APT_CHOOSEN) {
-            let (coins, x, y) = get_data(coin_from, coin_to);
-            let amount_out_min = get_X_to_Y_out(amount, coin_from, coin_to);
-
             router_v3::swap_batch_coin_directly_deposit_entry<AptosCoin>(
                 owner_signer,
                 coins,
@@ -100,9 +122,6 @@ module hedos::interact_hyperion {
                 amount_out_min
             );
         } else if (coin_from == AMAPT_CHOOSEN) {
-            let (coins, x, y) = get_data(coin_from, coin_to);
-            let amount_out_min = get_X_to_Y_out(amount, coin_from, coin_to);
-
             router_v3::swap_batch_coin_directly_deposit_entry<AmnisApt>(
                 owner_signer,
                 coins,

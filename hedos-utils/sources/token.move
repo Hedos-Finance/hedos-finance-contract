@@ -11,8 +11,71 @@ module hedos::token {
     use amnis::amapt_token::AmnisApt;
     use amnis::stapt_token::StakedApt;
 
+    use std::string::{String, utf8};
+
 
     const USDC_ADDRESS: address = @USDC;
+    const WBTC_ADDRESS: address = @WBTC;
+    const XBTC_ADDRESS: address = @XBTC;
+
+    #[view]
+    public fun usdc(): String {
+        utf8(b"USDC")
+    }   
+
+    #[view]
+    public fun apt(): String {
+        utf8(b"APT")
+    }
+
+    #[view]
+    public fun amapt(): String {
+        utf8(b"AMAPT")
+    }
+
+    #[view]
+    public fun wbtc(): String {
+        utf8(b"WBTC")
+    }
+
+    #[view]
+    public fun xbtc(): String {
+        utf8(b"XBTC")
+    }
+
+    #[view]
+    public fun get_balance(account: address, token: String): u64 {
+        if (token == usdc()) {
+            let usdc = object::address_to_object<Metadata>(USDC_ADDRESS);
+            primary_fungible_store::balance<Metadata>(account, usdc)
+        } else if (token == apt()) {
+            if (account::exists_at(account)) {
+                coin::balance<AptosCoin>(account)
+            } else {
+                0
+            }
+        // } else if (token == "AMAPT") {
+        //     if (account::exists_at(account)) {
+        //         coin::balance<AmnisApt>(account)
+        //     } else {
+        //         0
+        //     }
+        // } else if (token == "STAPT") {
+        //     if (account::exists_at(account)) {
+        //         coin::balance<StakedApt>(account)
+        //     } else {
+        //         0
+        //     }
+        } else if (token == wbtc()) {
+            let wbtc = object::address_to_object<Metadata>(WBTC_ADDRESS);
+            primary_fungible_store::balance<Metadata>(account, wbtc)
+        } else if (token == xbtc()) {
+            let xbtc = object::address_to_object<Metadata>(XBTC_ADDRESS);
+            primary_fungible_store::balance<Metadata>(account, xbtc)
+        } else {
+            abort 1
+        }
+    }
 
     #[view]
     public fun get_usdc_balance(account: address): u64{
