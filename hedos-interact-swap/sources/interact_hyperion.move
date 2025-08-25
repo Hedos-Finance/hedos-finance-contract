@@ -141,6 +141,9 @@ module hedos::interact_hyperion {
         coin_from: u8,
         coin_to: u8
     ): u64 {
+        if (amount == 0) {
+            return 0;
+        };
         let (coins, x, y) = get_data(coin_from, coin_to);
 
         let price = router_v3::get_batch_amount_out(
@@ -158,6 +161,9 @@ module hedos::interact_hyperion {
         coin_from: u8,
         coin_to: u8
     ): u64 {
+        if (amount == 0) {
+            return 0;
+        };
         let (coins, x, y) = get_data(coin_from, coin_to);
 
         let price = router_v3::get_batch_amount_in(
