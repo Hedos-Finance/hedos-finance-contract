@@ -7,6 +7,8 @@ module hedos::interact_merkle_trade {
 
     use merkle::managed_trading;
 
+    const DECIMAL_BASE: u64 = 1000_000_000_000_000;
+
     #[view]
     public fun apt_usd(): String {
         utf8(b"APT_USD")
@@ -18,6 +20,17 @@ module hedos::interact_merkle_trade {
     }
 
     #[view]
+    public fun apt_usdc(): String {
+        utf8(b"APT_USDC")
+    }
+
+    #[view]
+    public fun btc_usdc(): String {
+        utf8(b"BTC_USDC")
+    }
+    
+
+    #[view]
     public fun get_size_delta_and_collateral_delta(
         _collateral_delta: u64,
         _leverage: u64,
@@ -25,15 +38,25 @@ module hedos::interact_merkle_trade {
         _is_maker: bool,
         _pair: String,
     ): (u64, u64) {
+        if (_leverage % DECIMAL_BASE != 0) {
+            let collateral_delta = _collateral_delta;
+            let numerator = (collateral_delta as u128) * (_leverage as u128);
+            let size_delta = (((numerator - 1) / (DECIMAL_BASE as u128)) as u64) + 1;
+
+            return (size_delta, collateral_delta);
+        };
+
+        _leverage /= DECIMAL_BASE;
+
         let numerator = 10_000;
         let denominator = 10_000;
-        if (_pair == apt_usd()) {
+        if (_pair == apt_usdc()) {
             if (_is_maker) {
                 denominator += _leverage * 4;
             } else {
                 denominator += _leverage * 8;
             };
-        } else if (_pair == btc_usd()) {
+        } else if (_pair == btc_usdc()) {
             if (_is_maker) {
                 denominator += _leverage * 3;
             } else {
@@ -67,7 +90,7 @@ module hedos::interact_merkle_trade {
         _market_skew: bool,
         _pair: String
     ) {
-        if (_pair == apt_usd()) {
+        if (_pair == apt_usdc()) {
             if (!_is_long) {
                 if (_open) {
                     open_short_order<APT_USD, W_USDC>(_signer, _user_address, _size_delta, _collateral_delta);
@@ -81,7 +104,7 @@ module hedos::interact_merkle_trade {
                     close_long_order<APT_USD, W_USDC>(_signer, _user_address, _size_delta, _collateral_delta);
                 }
             }
-        } else if (_pair == btc_usd()) {
+        } else if (_pair == btc_usdc()) {
             if (!_is_long) {
                 if (_open) {
                     open_short_order<BTC_USD, W_USDC>(_signer, _user_address, _size_delta, _collateral_delta);
@@ -117,6 +140,7 @@ module hedos::interact_merkle_trade {
         };
         
         let (size_delta, collateral_delta) = get_size_delta_and_collateral_delta(_collateral_delta, _leverage, _open, maker, _pair);
+
         simple_trade_by_size(
             _signer,
             _user_address,
