@@ -412,7 +412,7 @@ module hedos::lending_actions {
         lending_withdraw(signer, amount_withdraw, token, protocol);
     }
 
-    public fun lending_repay_and_withdraw_all(
+    public entry fun lending_repay_and_withdraw_all(
         signer: &signer, 
         token_repay: String, 
         token_withdraw: String, 
