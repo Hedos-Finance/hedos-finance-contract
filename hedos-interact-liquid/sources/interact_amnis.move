@@ -50,6 +50,15 @@ module hedos::interact_amnis{
         router::deposit_and_stake_entry(depositor, amount, receiver);
     }
 
+    public entry fun only_stake(
+        depositor: &signer,
+        amount: u64,
+        receiver: address
+    ){
+        // Call the stake function from the amnis router module
+        router::stake_entry(depositor, amount, receiver);
+    }
+
     public entry fun unstake_amAPT(
         user: &signer,
         amount: u64,
