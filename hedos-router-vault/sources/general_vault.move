@@ -3,7 +3,7 @@ module hedos::general_vault {
     use aptos_framework::object::{Self, ExtendRef};
     use aptos_framework::event::{emit};
 
-    use hedos::token::{transfer_usdc};
+    use hedos::token::{transfer_usdc, get_usdc_balance};
     
     use hedos::shares_token;
 
@@ -495,7 +495,7 @@ module hedos::general_vault {
         let account = signer::address_of(signer);
         
         shares_token::transfer_risky(signer, get_vault_address(), shares);
-
+ 
         emit(Withdraw {
             account,
             amount: shares,
@@ -533,7 +533,13 @@ module hedos::general_vault {
         vault.total_value_lock -= amount;
         vault.total_deposited_risky -= amount;
 
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        if (usdc_balance < amount) {
+            amount = usdc_balance;
+        };
+
         shares_token::burn_risky(admin, get_vault_address(), shares);
+
         transfer_usdc(vault_signer, account, amount);
     }
 
@@ -552,7 +558,39 @@ module hedos::general_vault {
         vault.total_value_lock -= amount;
         vault.total_deposited_safety -= amount;
 
+        let usdc_balance = get_usdc_balance(vault_ref.vault_address);
+        if (usdc_balance < amount) {
+            amount = usdc_balance;
+        };
+
         shares_token::burn_safety(admin, get_vault_address(), shares);
+
         transfer_usdc(vault_signer, account, amount);
+    }
+
+    public entry fun revert_risky(
+        admin: &signer,
+        account: address,
+        shares: u64
+    ) acquires VaultRef {
+        only_admin(admin);
+
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        shares_token::transfer_risky(vault_signer, account, shares);
+    }
+
+    public entry fun revert_safety(
+        admin: &signer,
+        account: address,
+        shares: u64
+    ) acquires VaultRef {
+        only_admin(admin);
+
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault_signer = &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+
+        shares_token::transfer_safety(vault_signer, account, shares);
     }
 }
