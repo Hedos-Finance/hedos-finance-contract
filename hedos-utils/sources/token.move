@@ -17,6 +17,8 @@ module hedos::token {
     const USDC_ADDRESS: address = @USDC;
     const WBTC_ADDRESS: address = @WBTC;
     const XBTC_ADDRESS: address = @XBTC;
+    const THALA_LP_APT_USDC_ADDRESS: address = @THALA_LP_APT_USDC;
+    const THALA_LP_APT_USDT_ADDRESS: address = @THALA_LP_APT_USDT;
 
     #[view]
     public fun usdc(): String {
@@ -42,6 +44,17 @@ module hedos::token {
     public fun xbtc(): String {
         utf8(b"XBTC")
     }
+
+    #[view]
+    public fun thala_lp_apt_usdc(): String {
+        utf8(b"THALA-LP-APT-USDC")
+    }
+
+    #[view]
+    public fun thala_lp_apt_usdt(): String {
+        utf8(b"THALA-LP-APT-USDT")
+    }
+
 
     #[view]
     public fun get_balance(account: address, token: String): u64 {
@@ -72,6 +85,12 @@ module hedos::token {
         } else if (token == xbtc()) {
             let xbtc = object::address_to_object<Metadata>(XBTC_ADDRESS);
             primary_fungible_store::balance<Metadata>(account, xbtc)
+        } else if (token == thala_lp_apt_usdc()) {
+            let thala_lp_apt_usdc = object::address_to_object<Metadata>(THALA_LP_APT_USDC_ADDRESS);
+            primary_fungible_store::balance<Metadata>(account, thala_lp_apt_usdc)
+        } else if (token == thala_lp_apt_usdt()) {
+            let thala_lp_apt_usdt = object::address_to_object<Metadata>(THALA_LP_APT_USDT_ADDRESS);
+            primary_fungible_store::balance<Metadata>(account, thala_lp_apt_usdt)
         } else {
             abort 1
         }

@@ -1,0 +1,25 @@
+[package]
+name = "hedos-interact-liquidity-pool"
+version = "1.0.0"
+authors = []
+
+[addresses]
+hedos                   = "0x3d4d0c5a1467ba82881e89b21bfabd85f38225ccbf27309ebdd6d61417923d64"
+THALA_POOL_APT_USDC     = "0xa928222429caf1924c944973c2cd9fc306ec41152ba4de27a001327021a4dff7"
+THALA_LP_APT_USDC       = "0xa928222429caf1924c944973c2cd9fc306ec41152ba4de27a001327021a4dff7"
+THALA_LP_APT_USDT       = "0x99d34f16193e251af236d5a5c3114fa54e22ca512280317eda2f8faf1514c395"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
+
+
+[dependencies.ThalaSwapV2]
+local = "../deps/thala-interface/swap"
+
+[dependencies]
