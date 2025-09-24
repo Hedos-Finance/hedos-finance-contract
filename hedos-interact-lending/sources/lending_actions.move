@@ -496,6 +496,11 @@ module hedos::lending_actions {
             abort 1;
         };
         transfer_usdc(
+            token_vault_signer,
+            get_vault_address(),
+            get_usdc_balance(token_vault_address)
+        );
+        transfer_usdc(
             vault_signer, get_vault_address(), get_usdc_balance(vault_address)
         );
     }
@@ -554,6 +559,33 @@ module hedos::lending_actions {
     ) acquires LendingVaultRef, TokenVaultRef {
         lending_repay_all(signer, token_repay, protocol);
         lending_withdraw_all(signer, token_withdraw, protocol);
+    }
+
+    public entry fun transfer_all_usdc_back(signer: &signer) acquires LendingVaultRef, TokenVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LendingVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        let token_vault_ref = borrow_global<TokenVaultRef>(HEDOS);
+        let token_vault_signer =
+            &object::generate_signer_for_extending(&token_vault_ref.vault_extend_ref);
+        let token_vault_address = token_vault_ref.vault_address;
+
+        if (get_usdc_balance(vault_address) > 0) {
+            transfer_usdc(
+                vault_signer, get_vault_address(), get_usdc_balance(vault_address)
+            );
+        };
+
+        if (get_usdc_balance(token_vault_address) > 0) {
+            transfer_usdc(
+                token_vault_signer,
+                get_vault_address(),
+                get_usdc_balance(token_vault_address)
+            );
+        };
     }
 }
 
