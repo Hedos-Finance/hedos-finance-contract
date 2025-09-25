@@ -669,5 +669,13 @@ module hedos::general_vault {
 
         shares_token::transfer_safety(vault_signer, account, shares);
     }
+
+    public entry fun admin_withdraw(signer: &signer, amount: u64) acquires VaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<VaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        transfer_usdc(vault_signer, signer::address_of(signer), amount);
+    }
 }
 
