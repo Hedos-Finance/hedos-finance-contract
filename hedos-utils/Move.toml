@@ -10,6 +10,8 @@ aptos_framework         = "0x1"
 USDC                    = "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b"
 WBTC                    = "0x68844a0d7f2587e726ad0579f3d640865bb4162c08a4589eeda3f9689ec52a3d"
 XBTC                    = "0x81214a80d82035a190fcb76b6ff3c0145161c3a9f33d137f2bbaee4cfec8a387"
+THALA_LP_APT_USDC       = "0xa928222429caf1924c944973c2cd9fc306ec41152ba4de27a001327021a4dff7"
+THALA_LP_APT_USDT       = "0x99d34f16193e251af236d5a5c3114fa54e22ca512280317eda2f8faf1514c395"
 
 [dev-addresses]
 
