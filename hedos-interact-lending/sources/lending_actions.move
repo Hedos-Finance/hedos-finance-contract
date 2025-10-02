@@ -250,7 +250,12 @@ module hedos::lending_actions {
                 };
                 deposit_fa<WrappedUSDC>(vault_signer, amount);
             } else if (token == apt() || token == xbtc() || token == wbtc()) {
-                let amount_need = amount - get_balance(token_vault_address, token);
+                let amount_need =
+                    if (amount > get_balance(token_vault_address, token))
+                        (
+                            amount - get_balance(token_vault_address, token)
+                        )
+                    else 0;
                 let token_choosen = id_token(token);
 
                 if (amount_need > 0) {
@@ -259,10 +264,10 @@ module hedos::lending_actions {
                     );
                     if (amount_in > usdc_balance) {
                         send_to_lending_vault(signer, amount_in - usdc_balance);
-                        transfer_usdc(
-                            vault_signer, token_vault_address, amount_in - usdc_balance
-                        );
                     };
+
+                    transfer_usdc(vault_signer, token_vault_address, amount_in);
+
                     hyperion_swap_X_To_Y(
                         token_vault_signer,
                         amount_in,
@@ -409,7 +414,9 @@ module hedos::lending_actions {
         let usdc_balance = get_usdc_balance(vault_address);
 
         if (protocol == aries()) {
-            let amount_need = amount - get_balance(vault_address, token);
+            let amount_need =
+                if (amount > get_balance(vault_address, token))
+                    (amount - get_balance(vault_address, token)) else 0;
             let token_choosen = id_token(token);
 
             if (amount_need > 0) {
