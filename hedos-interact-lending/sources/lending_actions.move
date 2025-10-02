@@ -478,6 +478,9 @@ module hedos::lending_actions {
         if (protocol == aries()) {
             if (token == usdc()) {
                 withdraw_fa<WrappedUSDC>(vault_signer, amount, false);
+                transfer_usdc(
+                    vault_signer, get_vault_address(), get_usdc_balance(vault_address)
+                );
             } else {
                 if (token == apt()) {
                     withdraw<AptosCoin>(token_vault_signer, amount, false);
@@ -499,17 +502,15 @@ module hedos::lending_actions {
                     USDC_CHOOSEN
                 );
             };
+
+            transfer_usdc(
+                token_vault_signer,
+                get_vault_address(),
+                get_usdc_balance(token_vault_address)
+            );
         } else {
             abort 1;
         };
-        transfer_usdc(
-            token_vault_signer,
-            get_vault_address(),
-            get_usdc_balance(token_vault_address)
-        );
-        transfer_usdc(
-            vault_signer, get_vault_address(), get_usdc_balance(vault_address)
-        );
     }
 
     public entry fun lending_repay_and_withdraw(
