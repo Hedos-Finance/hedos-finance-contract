@@ -98,7 +98,7 @@ module hedos::general_vault {
             )
         };
 
-        emit(CreateNewVault { new_vault_address: new_vault_address });
+        emit(CreateNewVault { new_vault_address });
     }
 
     // VAULT ADDRESS
@@ -452,7 +452,7 @@ module hedos::general_vault {
 
     fun increase_nonce() acquires Nonce {
         let nonce = borrow_global_mut<Nonce>(HEDOS);
-        nonce.current_nonce = nonce.current_nonce + 1;
+        nonce.current_nonce += 1;
     }
 
     public entry fun init_nonce(signer: &signer) {
@@ -462,7 +462,9 @@ module hedos::general_vault {
         }
     }
 
+    /// nonce is invalid
     const INVALID_NONCE: u64 = 990;
+    /// timestamp is invalid
     const INVALID_TIMESTAMP: u64 = 989;
 
     // User Actions

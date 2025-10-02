@@ -4,7 +4,9 @@ module hedos::white_list {
 
     const HEDOS: address = @hedos;
 
+    /// Caller not hedos
     const NOT_HEDOS: u64 = 999;
+    /// Caller not admin
     const NOT_ADMIN: u64 = 998;
 
     struct WhiteList has key {
@@ -14,29 +16,23 @@ module hedos::white_list {
     public entry fun init_white_list(signer: &signer) {
         assert!(signer::address_of(signer) == HEDOS, NOT_HEDOS);
         let white_list = smart_vector::new<address>();
-        smart_vector::push_back(&mut white_list, HEDOS);
+        white_list.push_back(HEDOS);
         move_to(signer, WhiteList { admin_list: white_list });
     }
 
     public entry fun add_admin(signer: &signer, admin: address) acquires WhiteList {
         only_owner(signer);
-        let (found, _) =
-            smart_vector::index_of(&borrow_global<WhiteList>(HEDOS).admin_list, &admin);
+        let (found, _) = borrow_global<WhiteList>(HEDOS).admin_list.index_of(&admin);
         if (!found) {
-            smart_vector::push_back(
-                &mut borrow_global_mut<WhiteList>(HEDOS).admin_list, admin
-            );
+            borrow_global_mut<WhiteList>(HEDOS).admin_list.push_back(admin);
         }
     }
 
     public entry fun remove_admin(signer: &signer, admin: address) acquires WhiteList {
         only_owner(signer);
-        let (found, index) =
-            smart_vector::index_of(&borrow_global<WhiteList>(HEDOS).admin_list, &admin);
+        let (found, index) = borrow_global<WhiteList>(HEDOS).admin_list.index_of(&admin);
         if (found) {
-            smart_vector::remove(
-                &mut borrow_global_mut<WhiteList>(HEDOS).admin_list, index
-            );
+            borrow_global_mut<WhiteList>(HEDOS).admin_list.remove(index);
         }
     }
 
@@ -47,9 +43,7 @@ module hedos::white_list {
     public fun only_admin(signer: &signer) acquires WhiteList {
         let address_of_signer = signer::address_of(signer);
         let is_admin =
-            smart_vector::contains(
-                &borrow_global<WhiteList>(HEDOS).admin_list, &address_of_signer
-            );
+            borrow_global<WhiteList>(HEDOS).admin_list.contains(&address_of_signer);
         assert!(is_admin, NOT_ADMIN);
     }
 }

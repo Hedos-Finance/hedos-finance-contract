@@ -195,7 +195,7 @@ module hedos::lending_actions {
             )
         };
 
-        emit(CreateNewVault { new_vault_address: new_vault_address });
+        emit(CreateNewVault { new_vault_address });
     }
 
     public entry fun init_vault(signer: &signer) {
@@ -221,7 +221,7 @@ module hedos::lending_actions {
 
         init_token_vault(signer);
 
-        emit(CreateNewVault { new_vault_address: new_vault_address });
+        emit(CreateNewVault { new_vault_address });
     }
 
     public entry fun lending_deposit(
