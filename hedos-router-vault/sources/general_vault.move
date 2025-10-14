@@ -11,7 +11,7 @@ module hedos::general_vault {
 
     use std::signer::{Self};
 
-    use hedos::white_list::{only_admin};
+    use hedos::white_list::{only_admin, only_owner};
 
     const HEDOS: address = @hedos;
 
@@ -78,7 +78,7 @@ module hedos::general_vault {
     }
 
     public entry fun init_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -168,7 +168,7 @@ module hedos::general_vault {
 
     // Reserve Pool
     public entry fun init_reserve_pool(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -225,7 +225,7 @@ module hedos::general_vault {
 
     // Reward Pool
     public entry fun init_reward_pool(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -352,7 +352,7 @@ module hedos::general_vault {
         liquid: address,
         perp: address
     ) {
-        only_admin(signer);
+        only_owner(signer);
 
         if (!exists<InteractAdress>(HEDOS)) {
             move_to(
@@ -456,7 +456,7 @@ module hedos::general_vault {
     }
 
     public entry fun init_nonce(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         if (!exists<Nonce>(HEDOS)) {
             move_to(signer, Nonce { current_nonce: 0 });
         }
