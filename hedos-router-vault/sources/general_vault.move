@@ -329,12 +329,12 @@ module hedos::general_vault {
             reward_pool.risky_balance += risky;
         } else {
             if (safety_balance < safety) {
-                safety = safety_balance;
                 update_current_deposited_internal(safety - safety_balance, 0, false);
+                safety = safety_balance;
             };
             if (risky_balance < risky) {
-                risky = risky_balance;
                 update_current_deposited_internal(0, risky - risky_balance, false);
+                risky = risky_balance;
             };
             transfer_from_reward_pool(_signer, safety + risky);
             reward_pool.safety_balance -= safety;
