@@ -17,7 +17,7 @@ module hedos::lending_actions {
         get_amount_in
     };
     use hedos::token::{get_balance, get_usdc_balance, transfer_usdc};
-    use hedos::white_list::{only_admin};
+    use hedos::white_list::{only_admin, only_owner};
     use hedos::general_vault::{get_vault_address, send_to_lending_vault};
 
     use aptos_framework::object::{Self, ExtendRef};
@@ -179,7 +179,7 @@ module hedos::lending_actions {
     }
 
     public entry fun init_token_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -203,7 +203,7 @@ module hedos::lending_actions {
     }
 
     public entry fun init_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);

@@ -16,7 +16,7 @@ module hedos::liquid_actions {
         get_X_to_Y_out
     };
     use hedos::interact_amnis::{stake, only_stake, unstake_amAPT, price_stAPT};
-    use hedos::white_list::{only_admin};
+    use hedos::white_list::{only_admin, only_owner};
 
     const HEDOS: address = @hedos;
 
@@ -131,7 +131,7 @@ module hedos::liquid_actions {
     }
 
     public entry fun init_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
