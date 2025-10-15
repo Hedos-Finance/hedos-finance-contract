@@ -4,7 +4,7 @@ module hedos::perp_actions {
 
     use hedos::general_vault::{get_vault_address, send_to_perp_vault};
     use hedos::token::{transfer_usdc, get_usdc_balance};
-    use hedos::white_list::{only_admin};
+    use hedos::white_list::{only_admin, only_owner};
     use hedos::interact_merkle_trade::{simple_trade_by_leverage, simple_trade_by_size};
 
     use std::signer;
@@ -45,7 +45,7 @@ module hedos::perp_actions {
     }
 
     public entry fun init_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
 
         let short_constructor_ref = &object::create_object(HEDOS);
         let short_signer = &object::generate_signer(short_constructor_ref);

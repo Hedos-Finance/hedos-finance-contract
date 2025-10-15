@@ -11,9 +11,13 @@ module hedos::lending_actions {
         total_lending,
         get_borrow_amount
     };
-    use hedos::interact_hyperion::{hyperion_swap_X_To_Y, get_amount_in};
+    use hedos::interact_hyperion::{
+        hyperion_swap_X_To_Y,
+        hyperion_swap_X_To_Y_estimate,
+        get_amount_in
+    };
     use hedos::token::{get_balance, get_usdc_balance, transfer_usdc};
-    use hedos::white_list::{only_admin};
+    use hedos::white_list::{only_admin, only_owner};
     use hedos::general_vault::{get_vault_address, send_to_lending_vault};
 
     use aptos_framework::object::{Self, ExtendRef};
@@ -175,7 +179,7 @@ module hedos::lending_actions {
     }
 
     public entry fun init_token_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -195,11 +199,11 @@ module hedos::lending_actions {
             )
         };
 
-        emit(CreateNewVault { new_vault_address: new_vault_address });
+        emit(CreateNewVault { new_vault_address });
     }
 
     public entry fun init_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -221,7 +225,7 @@ module hedos::lending_actions {
 
         init_token_vault(signer);
 
-        emit(CreateNewVault { new_vault_address: new_vault_address });
+        emit(CreateNewVault { new_vault_address });
     }
 
     public entry fun lending_deposit(
@@ -250,7 +254,12 @@ module hedos::lending_actions {
                 };
                 deposit_fa<WrappedUSDC>(vault_signer, amount);
             } else if (token == apt() || token == xbtc() || token == wbtc()) {
-                let amount_need = amount - get_balance(token_vault_address, token);
+                let amount_need =
+                    if (amount > get_balance(token_vault_address, token))
+                        (
+                            amount - get_balance(token_vault_address, token)
+                        )
+                    else 0;
                 let token_choosen = id_token(token);
 
                 if (amount_need > 0) {
@@ -259,10 +268,10 @@ module hedos::lending_actions {
                     );
                     if (amount_in > usdc_balance) {
                         send_to_lending_vault(signer, amount_in - usdc_balance);
-                        transfer_usdc(
-                            vault_signer, token_vault_address, amount_in - usdc_balance
-                        );
                     };
+
+                    transfer_usdc(vault_signer, token_vault_address, amount_in);
+
                     hyperion_swap_X_To_Y(
                         token_vault_signer,
                         amount_in,
@@ -409,7 +418,9 @@ module hedos::lending_actions {
         let usdc_balance = get_usdc_balance(vault_address);
 
         if (protocol == aries()) {
-            let amount_need = amount - get_balance(vault_address, token);
+            let amount_need =
+                if (amount > get_balance(vault_address, token))
+                    (amount - get_balance(vault_address, token)) else 0;
             let token_choosen = id_token(token);
 
             if (amount_need > 0) {
@@ -471,6 +482,9 @@ module hedos::lending_actions {
         if (protocol == aries()) {
             if (token == usdc()) {
                 withdraw_fa<WrappedUSDC>(vault_signer, amount, false);
+                transfer_usdc(
+                    vault_signer, get_vault_address(), get_usdc_balance(vault_address)
+                );
             } else {
                 if (token == apt()) {
                     withdraw<AptosCoin>(token_vault_signer, amount, false);
@@ -492,17 +506,15 @@ module hedos::lending_actions {
                     USDC_CHOOSEN
                 );
             };
+
+            transfer_usdc(
+                token_vault_signer,
+                get_vault_address(),
+                get_usdc_balance(token_vault_address)
+            );
         } else {
             abort 1;
         };
-        transfer_usdc(
-            token_vault_signer,
-            get_vault_address(),
-            get_usdc_balance(token_vault_address)
-        );
-        transfer_usdc(
-            vault_signer, get_vault_address(), get_usdc_balance(vault_address)
-        );
     }
 
     public entry fun lending_repay_and_withdraw(
@@ -586,6 +598,433 @@ module hedos::lending_actions {
                 get_usdc_balance(token_vault_address)
             );
         };
+    }
+
+    // ============================================= Estimate part ==================================================
+
+    /// Out of estimate token
+    const OUT_OF_ESTIMATE: u64 = 911;
+
+    public entry fun lending_deposit_estimate(
+        signer: &signer,
+        amount: u64,
+        amount_estimate: u64,
+        token: String,
+        protocol: String
+    ) acquires LendingVaultRef, TokenVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LendingVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        let token_vault_ref = borrow_global<TokenVaultRef>(HEDOS);
+        let token_vault_signer =
+            &object::generate_signer_for_extending(&token_vault_ref.vault_extend_ref);
+        let token_vault_address = token_vault_ref.vault_address;
+
+        let usdc_balance = get_usdc_balance(vault_address);
+
+        if (protocol == aries()) {
+            if (token == usdc()) {
+                if (amount > usdc_balance) {
+                    send_to_lending_vault(signer, amount - usdc_balance);
+                };
+                deposit_fa<WrappedUSDC>(vault_signer, amount);
+            } else if (token == apt() || token == xbtc() || token == wbtc()) {
+                let amount_need =
+                    if (amount > get_balance(token_vault_address, token))
+                        (
+                            amount - get_balance(token_vault_address, token)
+                        )
+                    else 0;
+                let token_choosen = id_token(token);
+
+                let usdc_balance_before = get_usdc_balance(token_vault_address);
+
+                if (amount_need > 0) {
+                    let amount_in = get_amount_in(
+                        amount_need, USDC_CHOOSEN, token_choosen
+                    );
+                    if (amount_in > usdc_balance) {
+                        send_to_lending_vault(signer, amount_in - usdc_balance);
+                    };
+
+                    transfer_usdc(vault_signer, token_vault_address, amount_in);
+
+                    usdc_balance_before = get_usdc_balance(token_vault_address);
+
+                    hyperion_swap_X_To_Y(
+                        token_vault_signer,
+                        amount_in,
+                        USDC_CHOOSEN,
+                        token_choosen
+                    );
+                };
+
+                if (token == apt()) {
+                    deposit<AptosCoin>(token_vault_signer, amount, false);
+                } else if (token == xbtc()) {
+                    deposit_fa<WrappedXBTC>(token_vault_signer, amount);
+                } else if (token == wbtc()) {
+                    deposit_fa<WrappedWBTC>(token_vault_signer, amount);
+                } else {
+                    abort 1;
+                };
+
+                let token_balance = get_balance(token_vault_address, token);
+                if (token_balance > 0) {
+                    hyperion_swap_X_To_Y(
+                        token_vault_signer,
+                        token_balance,
+                        token_choosen,
+                        USDC_CHOOSEN
+                    );
+                    transfer_usdc(
+                        token_vault_signer,
+                        get_vault_address(),
+                        get_usdc_balance(token_vault_address)
+                    );
+                };
+
+                let usdc_after = get_usdc_balance(vault_address);
+                assert!(
+                    usdc_balance_before - usdc_after <= amount_estimate,
+                    OUT_OF_ESTIMATE
+                );
+            } else {
+                abort 1;
+            };
+        } else {
+            abort 1;
+        };
+    }
+
+    public entry fun lending_borrow_estimate(
+        signer: &signer,
+        amount: u64,
+        amount_estimate: u64,
+        token: String,
+        protocol: String
+    ) acquires LendingVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LendingVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        if (protocol == aries()) {
+            let token_choosen = id_token(token);
+            if (token == apt()) {
+                withdraw<AptosCoin>(vault_signer, amount, true);
+                // } else if (token == xbtc()) {
+                //     withdraw_fa<WrappedXBTC>(vault_signer, amount, true);
+            } else if (token == wbtc()) {
+                withdraw_fa<WrappedWBTC>(vault_signer, amount, true);
+            } else {
+                abort 1;
+            };
+            hyperion_swap_X_To_Y_estimate(
+                vault_signer,
+                get_balance(vault_address, token),
+                token_choosen,
+                USDC_CHOOSEN,
+                amount_estimate
+            );
+        } else {
+            abort 1;
+        };
+        transfer_usdc(
+            vault_signer, get_vault_address(), get_usdc_balance(vault_address)
+        );
+    }
+
+    public entry fun lending_deposit_and_borrow_estimate(
+        signer: &signer,
+        amount_deposit: u64,
+        token_deposit: String,
+        estimate_on_deposit: u64,
+        amount_borrow: u64,
+        token_borrow: String,
+        estimate_on_borrow: u64,
+        protocol: String
+    ) acquires LendingVaultRef, TokenVaultRef {
+        only_admin(signer);
+        lending_deposit_estimate(
+            signer,
+            amount_deposit,
+            estimate_on_deposit,
+            token_deposit,
+            protocol
+        );
+        lending_borrow_estimate(
+            signer,
+            amount_borrow,
+            estimate_on_borrow,
+            token_borrow,
+            protocol
+        );
+    }
+
+    public entry fun lending_deposit_and_borrow_by_rate_estimate(
+        signer: &signer,
+        amount_deposit: u64,
+        estimate_on_deposit: u64,
+        token_deposit: String,
+        estimate_on_borrow: u64,
+        token_borrow: String,
+        protocol: String,
+        rate: u64
+    ) acquires LendingVaultRef, TokenVaultRef {
+        only_admin(signer);
+
+        if (protocol == aries() && token_deposit == usdc()) {
+            let amount_borrow;
+
+            if (token_borrow == apt()) {
+                (_, amount_borrow) = get_borrow_amount<WrappedUSDC, AptosCoin>(
+                    amount_deposit, rate
+                );
+            } else if (token_borrow == wbtc()) {
+                (_, amount_borrow) = get_borrow_amount<WrappedUSDC, WrappedWBTC>(
+                    amount_deposit, rate
+                );
+            } else {
+                abort 1;
+            };
+
+            lending_deposit_estimate(
+                signer,
+                amount_deposit,
+                estimate_on_deposit,
+                token_deposit,
+                protocol
+            );
+            lending_borrow_estimate(
+                signer,
+                amount_borrow,
+                estimate_on_borrow,
+                token_borrow,
+                protocol
+            );
+        } else {
+            abort 1;
+        };
+    }
+
+    public entry fun lending_repay_estimate(
+        signer: &signer,
+        amount: u64,
+        amount_estimate: u64,
+        token: String,
+        protocol: String
+    ) acquires LendingVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LendingVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+        let usdc_balance = get_usdc_balance(vault_address);
+
+        if (protocol == aries()) {
+            let amount_need =
+                if (amount > get_balance(vault_address, token))
+                    (amount - get_balance(vault_address, token)) else 0;
+            let token_choosen = id_token(token);
+
+            if (amount_need > 0) {
+                let amount_in = get_amount_in(amount_need, USDC_CHOOSEN, token_choosen);
+
+                assert!(amount_in <= amount_estimate, OUT_OF_ESTIMATE);
+
+                if (amount_in > usdc_balance) {
+                    send_to_lending_vault(signer, amount_in - usdc_balance);
+                };
+
+                hyperion_swap_X_To_Y(
+                    vault_signer,
+                    amount_in,
+                    USDC_CHOOSEN,
+                    token_choosen
+                );
+            };
+            if (token == apt()) {
+                repay<AptosCoin>(vault_signer, amount);
+                // } else if (token == xbtc()) {
+                //     deposit_fa<WrappedXBTC>(vault_signer, amount);
+            } else if (token == wbtc()) {
+                deposit_fa<WrappedWBTC>(vault_signer, amount);
+            } else {
+                abort 1;
+            };
+
+            let token_balance = get_balance(vault_address, token);
+            if (token_balance > 0) {
+                hyperion_swap_X_To_Y(
+                    vault_signer,
+                    token_balance,
+                    token_choosen,
+                    USDC_CHOOSEN
+                );
+                transfer_usdc(
+                    vault_signer, get_vault_address(), get_usdc_balance(vault_address)
+                );
+            };
+        } else {
+            abort 1;
+        };
+    }
+
+    public entry fun lending_withdraw_estimate(
+        signer: &signer,
+        amount: u64,
+        amount_estimate: u64,
+        token: String,
+        protocol: String
+    ) acquires LendingVaultRef, TokenVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LendingVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        let token_vault_ref = borrow_global<TokenVaultRef>(HEDOS);
+        let token_vault_signer =
+            &object::generate_signer_for_extending(&token_vault_ref.vault_extend_ref);
+        let token_vault_address = token_vault_ref.vault_address;
+
+        if (protocol == aries()) {
+            if (token == usdc()) {
+                withdraw_fa<WrappedUSDC>(vault_signer, amount, false);
+                transfer_usdc(
+                    vault_signer, get_vault_address(), get_usdc_balance(vault_address)
+                );
+            } else {
+                if (token == apt()) {
+                    withdraw<AptosCoin>(token_vault_signer, amount, false);
+                } else if (token == xbtc()) {
+                    withdraw_fa<WrappedXBTC>(token_vault_signer, amount, false);
+                } else if (token == wbtc()) {
+                    withdraw_fa<WrappedWBTC>(token_vault_signer, amount, false);
+                } else {
+                    abort 1;
+                };
+
+                if (amount > get_balance(token_vault_address, token)) {
+                    amount = get_balance(token_vault_address, token);
+                };
+                hyperion_swap_X_To_Y_estimate(
+                    token_vault_signer,
+                    amount,
+                    id_token(token),
+                    USDC_CHOOSEN,
+                    amount_estimate
+                );
+            };
+
+            transfer_usdc(
+                token_vault_signer,
+                get_vault_address(),
+                get_usdc_balance(token_vault_address)
+            );
+        } else {
+            abort 1;
+        };
+    }
+
+    public entry fun lending_repay_and_withdraw_estimate(
+        signer: &signer,
+        amount_repay: u64,
+        estimate_on_repay: u64,
+        token_repay: String,
+        amount_withdraw: u64,
+        estimate_on_withdraw: u64,
+        token_withdraw: String,
+        protocol: String
+    ) acquires LendingVaultRef, TokenVaultRef {
+        only_admin(signer);
+
+        if (protocol == aries()
+            && (token_repay == apt()
+                || token_repay == wbtc())
+            && token_withdraw == usdc()) {
+            lending_repay_estimate(
+                signer,
+                amount_repay,
+                estimate_on_repay,
+                token_repay,
+                protocol
+            );
+            lending_withdraw_estimate(
+                signer,
+                amount_withdraw,
+                estimate_on_withdraw,
+                token_withdraw,
+                protocol
+            );
+        } else {
+            abort 1;
+        };
+    }
+
+    public entry fun lending_repay_all_estimate(
+        signer: &signer,
+        amount_estimate: u64,
+        token: String,
+        protocol: String
+    ) acquires LendingVaultRef {
+        only_admin(signer);
+
+        let amount_repay = get_total_loaning(token, protocol);
+
+        lending_repay_estimate(
+            signer,
+            amount_repay,
+            amount_estimate,
+            token,
+            protocol
+        );
+    }
+
+    public entry fun lending_withdraw_all_estimate(
+        signer: &signer,
+        amount_estimate: u64,
+        token: String,
+        protocol: String
+    ) acquires LendingVaultRef, TokenVaultRef {
+        only_admin(signer);
+
+        let amount_withdraw = get_total_lending(token, protocol);
+
+        lending_withdraw_estimate(
+            signer,
+            amount_withdraw,
+            amount_estimate,
+            token,
+            protocol
+        );
+    }
+
+    public entry fun lending_repay_and_withdraw_all_estimate(
+        signer: &signer,
+        estimate_on_repay: u64,
+        token_repay: String,
+        estimate_on_withdraw: u64,
+        token_withdraw: String,
+        protocol: String
+    ) acquires LendingVaultRef, TokenVaultRef {
+        lending_repay_all_estimate(
+            signer,
+            estimate_on_repay,
+            token_repay,
+            protocol
+        );
+        lending_withdraw_all_estimate(
+            signer,
+            estimate_on_withdraw,
+            token_withdraw,
+            protocol
+        );
     }
 }
 

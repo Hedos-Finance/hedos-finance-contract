@@ -11,7 +11,7 @@ module hedos::general_vault {
 
     use std::signer::{Self};
 
-    use hedos::white_list::{only_admin};
+    use hedos::white_list::{only_admin, only_owner};
 
     const HEDOS: address = @hedos;
 
@@ -78,7 +78,7 @@ module hedos::general_vault {
     }
 
     public entry fun init_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -98,7 +98,7 @@ module hedos::general_vault {
             )
         };
 
-        emit(CreateNewVault { new_vault_address: new_vault_address });
+        emit(CreateNewVault { new_vault_address });
     }
 
     // VAULT ADDRESS
@@ -168,7 +168,7 @@ module hedos::general_vault {
 
     // Reserve Pool
     public entry fun init_reserve_pool(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -225,7 +225,7 @@ module hedos::general_vault {
 
     // Reward Pool
     public entry fun init_reward_pool(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -329,12 +329,12 @@ module hedos::general_vault {
             reward_pool.risky_balance += risky;
         } else {
             if (safety_balance < safety) {
-                safety = safety_balance;
                 update_current_deposited_internal(safety - safety_balance, 0, false);
+                safety = safety_balance;
             };
             if (risky_balance < risky) {
-                risky = risky_balance;
                 update_current_deposited_internal(0, risky - risky_balance, false);
+                risky = risky_balance;
             };
             transfer_from_reward_pool(_signer, safety + risky);
             reward_pool.safety_balance -= safety;
@@ -352,7 +352,7 @@ module hedos::general_vault {
         liquid: address,
         perp: address
     ) {
-        only_admin(signer);
+        only_owner(signer);
 
         if (!exists<InteractAdress>(HEDOS)) {
             move_to(
@@ -452,17 +452,19 @@ module hedos::general_vault {
 
     fun increase_nonce() acquires Nonce {
         let nonce = borrow_global_mut<Nonce>(HEDOS);
-        nonce.current_nonce = nonce.current_nonce + 1;
+        nonce.current_nonce += 1;
     }
 
     public entry fun init_nonce(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         if (!exists<Nonce>(HEDOS)) {
             move_to(signer, Nonce { current_nonce: 0 });
         }
     }
 
+    /// nonce is invalid
     const INVALID_NONCE: u64 = 990;
+    /// timestamp is invalid
     const INVALID_TIMESTAMP: u64 = 989;
 
     // User Actions

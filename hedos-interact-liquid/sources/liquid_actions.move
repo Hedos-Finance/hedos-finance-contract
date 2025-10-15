@@ -9,9 +9,14 @@ module hedos::liquid_actions {
         transfer_usdc,
         get_usdc_balance
     };
-    use hedos::interact_hyperion::{hyperion_swap_X_To_Y, get_amount_in, get_X_to_Y_out};
+    use hedos::interact_hyperion::{
+        hyperion_swap_X_To_Y,
+        hyperion_swap_X_To_Y_estimate,
+        get_amount_in,
+        get_X_to_Y_out
+    };
     use hedos::interact_amnis::{stake, only_stake, unstake_amAPT, price_stAPT};
-    use hedos::white_list::{only_admin};
+    use hedos::white_list::{only_admin, only_owner};
 
     const HEDOS: address = @hedos;
 
@@ -25,6 +30,9 @@ module hedos::liquid_actions {
     const AMAPT_CHOOSEN: u8 = 3;
 
     const PRECISION: u128 = 100000000;
+
+    /// out of amount APT estimate
+    const OUT_OF_ESTIMATE: u64 = 901;
 
     #[event]
     struct CreateNewVault has drop, store {
@@ -123,7 +131,7 @@ module hedos::liquid_actions {
     }
 
     public entry fun init_vault(signer: &signer) {
-        only_admin(signer);
+        only_owner(signer);
         let constructor_ref = &object::create_object(HEDOS);
         let vault_signer = &object::generate_signer(constructor_ref);
         let extend_ref = object::generate_extend_ref(constructor_ref);
@@ -175,6 +183,38 @@ module hedos::liquid_actions {
         };
     }
 
+    public entry fun liquid_staking_estimate(
+        signer: &signer,
+        amountUSDC: u64,
+        estimate_amount: u64,
+        token: String,
+        protocol: String
+    ) acquires LiquidVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LiquidVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        if (protocol == amnis() && token == apt()) {
+            let amount_stake_before = get_apt_balance(vault_address);
+            send_to_staking_vault(signer, amountUSDC);
+            hyperion_swap_X_To_Y_estimate(
+                vault_signer,
+                amountUSDC,
+                USDC_CHOOSEN,
+                APT_CHOOSEN,
+                estimate_amount
+            );
+            let amount_stake_after = get_apt_balance(vault_address);
+            let amount_stake = amount_stake_after - amount_stake_before;
+
+            stake(vault_signer, amount_stake, vault_address);
+        } else {
+            abort 1;
+        };
+    }
+
     public entry fun liquid_swap_staking(
         signer: &signer,
         amountUSDC: u64,
@@ -195,6 +235,38 @@ module hedos::liquid_actions {
                 amountUSDC,
                 USDC_CHOOSEN,
                 AMAPT_CHOOSEN
+            );
+            let amount_stake_after = get_amAPT_balance(vault_address);
+            let amount_stake = amount_stake_after - amount_stake_before;
+
+            only_stake(vault_signer, amount_stake, vault_address);
+        } else {
+            abort 1;
+        };
+    }
+
+    public entry fun liquid_swap_staking_estimate(
+        signer: &signer,
+        amountUSDC: u64,
+        estimate_amount: u64,
+        token: String,
+        protocol: String
+    ) acquires LiquidVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LiquidVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        if (protocol == amnis() && token == apt()) {
+            let amount_stake_before = get_amAPT_balance(vault_address);
+            send_to_staking_vault(signer, amountUSDC);
+            hyperion_swap_X_To_Y_estimate(
+                vault_signer,
+                amountUSDC,
+                USDC_CHOOSEN,
+                AMAPT_CHOOSEN,
+                estimate_amount
             );
             let amount_stake_after = get_amAPT_balance(vault_address);
             let amount_stake = amount_stake_after - amount_stake_before;
@@ -260,6 +332,81 @@ module hedos::liquid_actions {
                 amAPT_balance,
                 AMAPT_CHOOSEN,
                 USDC_CHOOSEN
+            );
+        } else {
+            abort 1;
+        };
+
+        transfer_usdc(
+            vault_signer, get_vault_address(), get_usdc_balance(vault_address)
+        );
+    }
+
+    public entry fun liquid_staking_unstake_estimate(
+        signer: &signer,
+        amountUSDC: u64,
+        estimate_amount: u64,
+        token: String,
+        protocol: String
+    ) acquires LiquidVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LiquidVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        if (protocol == amnis() && token == apt()) {
+            let amApt_unstake = get_amount_in(amountUSDC, AMAPT_CHOOSEN, USDC_CHOOSEN);
+
+            let st_unstake = (
+                PRECISION * (amApt_unstake as u128) / (price_stAPT() as u128)
+            ) as u64;
+
+            let amAPT_balance_before = get_amAPT_balance(vault_address);
+            unstake_amAPT(vault_signer, st_unstake, vault_address);
+            let amAPT_balance_after = get_amAPT_balance(vault_address);
+
+            assert!(
+                amAPT_balance_after - amAPT_balance_before > estimate_amount,
+                OUT_OF_ESTIMATE
+            );
+
+            hyperion_swap_X_To_Y(
+                vault_signer,
+                amAPT_balance_after - amAPT_balance_before,
+                AMAPT_CHOOSEN,
+                USDC_CHOOSEN
+            );
+        } else {
+            abort 1;
+        };
+
+        transfer_usdc(vault_signer, get_vault_address(), amountUSDC);
+    }
+
+    public entry fun liquid_staking_unstake_all_estimate(
+        signer: &signer,
+        estimate_amount: u64,
+        token: String,
+        protocol: String
+    ) acquires LiquidVaultRef {
+        only_admin(signer);
+        let vault_ref = borrow_global<LiquidVaultRef>(HEDOS);
+        let vault_signer =
+            &object::generate_signer_for_extending(&vault_ref.vault_extend_ref);
+        let vault_address = vault_ref.vault_address;
+
+        if (protocol == amnis() && token == apt()) {
+            let stAPT_balance = get_stAPT_balance(vault_address);
+            unstake_amAPT(vault_signer, stAPT_balance, vault_address);
+
+            let amAPT_balance = get_amAPT_balance(vault_address);
+            hyperion_swap_X_To_Y_estimate(
+                vault_signer,
+                amAPT_balance,
+                AMAPT_CHOOSEN,
+                USDC_CHOOSEN,
+                estimate_amount
             );
         } else {
             abort 1;
